@@ -20,6 +20,8 @@ Route::view('/pedoman', 'pedoman')->name('pedoman');
 
 Route::view('/morikafe', 'morikafe')->name('morikafe');
 
+Route::view('/faq', 'faq')->name('faq');
+
 Route::middleware(['auth'])->group(function () {
     Route::redirect('settings', 'settings/profile');
 

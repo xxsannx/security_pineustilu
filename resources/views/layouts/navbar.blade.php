@@ -51,22 +51,22 @@
                     </div>
 
                     <!-- Aktivitas -->
-                    <a href="#aktivitas" class="px-4 py-2 text-[#017249] hover:text-gray-700 font-semibold transition-colors text-lg" style="font-family: 'Veteran', monospace;">
+                    <a href="{{ route('aktivitas') }}" class="px-4 py-2 text-[#017249] hover:text-gray-700 font-semibold transition-colors text-lg" style="font-family: 'Veteran', monospace;">
                         Aktivitas
                     </a>
 
                     <!-- Pedoman -->
-                    <a href="#pedoman" class="px-4 py-2 text-[#017249] hover:text-gray-700 font-semibold transition-colors text-lg" style="font-family: 'Veteran', monospace;">
+                    <a href="{{ route('pedoman') }}" class="px-4 py-2 text-[#017249] hover:text-gray-700 font-semibold transition-colors text-lg" style="font-family: 'Veteran', monospace;">
                         Pedoman
                     </a>
 
                     <!-- Morikafe -->
-                    <a href="#morikafe" class="px-4 py-2 text-[#017249] hover:text-gray-700 font-semibold transition-colors text-lg" style="font-family: 'Veteran', monospace;">
+                    <a href="{{ route('morikafe') }}" class="px-4 py-2 text-[#017249] hover:text-gray-700 font-semibold transition-colors text-lg" style="font-family: 'Veteran', monospace;">
                         Morikafe
                     </a>
 
                     <!-- FAQ -->
-                    <a href="#faq" class="px-4 py-2 text-[#017249] hover:text-gray-700 font-semibold transition-colors text-lg" style="font-family: 'Veteran', monospace;">
+                    <a href="{{ route('faq') }}" class="px-4 py-2 text-[#017249] hover:text-gray-700 font-semibold transition-colors text-lg" style="font-family: 'Veteran', monospace;">
                         FAQ
                     </a>
 
@@ -145,16 +145,16 @@
                     </div>
                 </div>
 
-                <a href="#aktivitas" class="block px-4 py-3 text-[#017249] hover:bg-gray-100 hover:text-gray-700 rounded-lg transition-colors text-base font-semibold" style="font-family: 'Veteran', monospace;">
+                <a href="{{ route('aktivitas') }}" class="block px-4 py-3 text-[#017249] hover:bg-gray-100 hover:text-gray-700 rounded-lg transition-colors text-base font-semibold" style="font-family: 'Veteran', monospace;">
                     Aktivitas
                 </a>
-                <a href="#pedoman" class="block px-4 py-3 text-[#017249] hover:bg-gray-100 hover:text-gray-700 rounded-lg transition-colors text-base font-semibold" style="font-family: 'Veteran', monospace;">
+                <a href="{{ route('pedoman') }}" class="block px-4 py-3 text-[#017249] hover:bg-gray-100 hover:text-gray-700 rounded-lg transition-colors text-base font-semibold" style="font-family: 'Veteran', monospace;">
                     Pedoman
                 </a>
-                <a href="#morikafe" class="block px-4 py-3 text-[#017249] hover:bg-gray-100 hover:text-gray-700 rounded-lg transition-colors text-base font-semibold" style="font-family: 'Veteran', monospace;">
+                <a href="{{ route('morikafe') }}" class="block px-4 py-3 text-[#017249] hover:bg-gray-100 hover:text-gray-700 rounded-lg transition-colors text-base font-semibold" style="font-family: 'Veteran', monospace;">
                     Morikafe
                 </a>
-                <a href="#faq" class="block px-4 py-3 text-[#017249] hover:bg-gray-100 hover:text-gray-700 rounded-lg transition-colors text-base font-semibold" style="font-family: 'Veteran', monospace;">
+                <a href="{{ route('faq') }}" class="block px-4 py-3 text-[#017249] hover:bg-gray-100 hover:text-gray-700 rounded-lg transition-colors text-base font-semibold" style="font-family: 'Veteran', monospace;">
                     FAQ
                 </a>
 
