@@ -30,6 +30,14 @@ class MidtransService
     public function generateSnapToken(Booking $booking): ?string
     {
         try {
+            // Load relationships if not already loaded
+            if (!$booking->relationLoaded('bookingDetails')) {
+                $booking->load('bookingDetails');
+            }
+            if (!$booking->relationLoaded('bookingOutbounds')) {
+                $booking->load('bookingOutbounds');
+            }
+
             // Calculate total amount
             $totalAmount = $this->calculateBookingTotal($booking);
 
@@ -157,18 +165,16 @@ class MidtransService
         }
 
         // Add outbound items if any
-        if ($booking->bookingOutbounds()->count() > 0) {
-            foreach ($booking->bookingOutbounds as $outbound) {
-                $price = (int) ($outbound->price ?? 0);
-                if ($price > 0) {
-                    $totalPrice += $price;
-                    $items[] = [
-                        'id' => 'outbound_' . $outbound->id,
-                        'price' => $price,
-                        'quantity' => 1,
-                        'name' => $outbound->name ?? 'Outbound Activity',
-                    ];
-                }
+        foreach ($booking->bookingOutbounds as $outbound) {
+            $price = (int) ($outbound->total_price ?? 0);
+            if ($price > 0) {
+                $totalPrice += $price;
+                $items[] = [
+                    'id' => 'outbound_' . $outbound->id,
+                    'price' => $price,
+                    'quantity' => 1,
+                    'name' => $outbound->outbound?->name ?? 'Outbound Activity',
+                ];
             }
         }
 
@@ -190,7 +196,7 @@ class MidtransService
 
         // Sum outbound prices
         foreach ($booking->bookingOutbounds as $outbound) {
-            $total += (int) ($outbound->price ?? 0);
+            $total += (int) ($outbound->total_price ?? 0);
         }
 
         return $total;
