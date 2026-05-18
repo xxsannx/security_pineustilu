@@ -16,34 +16,34 @@ class PasswordUpdateTest extends TestCase
     public function test_password_can_be_updated(): void
     {
         $user = User::factory()->create([
-            'password' => Hash::make('password'),
+            'password' => Hash::make('Password123!'),
         ]);
 
         $this->actingAs($user);
 
         $response = Livewire::test(Password::class)
-            ->set('current_password', 'password')
-            ->set('password', 'new-password')
-            ->set('password_confirmation', 'new-password')
+            ->set('current_password', 'Password123!')
+            ->set('password', 'NewPassword456!')
+            ->set('password_confirmation', 'NewPassword456!')
             ->call('updatePassword');
 
         $response->assertHasNoErrors();
 
-        $this->assertTrue(Hash::check('new-password', $user->refresh()->password));
+        $this->assertTrue(Hash::check('NewPassword456!', $user->refresh()->password));
     }
 
     public function test_correct_password_must_be_provided_to_update_password(): void
     {
         $user = User::factory()->create([
-            'password' => Hash::make('password'),
+            'password' => Hash::make('Password123!'),
         ]);
 
         $this->actingAs($user);
 
         $response = Livewire::test(Password::class)
-            ->set('current_password', 'wrong-password')
-            ->set('password', 'new-password')
-            ->set('password_confirmation', 'new-password')
+            ->set('current_password', 'wrong-password123')
+            ->set('password', 'NewPassword456!')
+            ->set('password_confirmation', 'NewPassword456!')
             ->call('updatePassword');
 
         $response->assertHasErrors(['current_password']);

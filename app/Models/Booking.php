@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\BookingStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,7 +26,24 @@ class Booking extends Model
 
     protected $casts = [
         'booking_date' => 'date',
+        'status' => BookingStatus::class,
     ];
+
+    /**
+     * Check if booking can be cancelled.
+     */
+    public function canBeCancelled(): bool
+    {
+        return $this->status->canBeCancelled();
+    }
+
+    /**
+     * Check if booking can be rescheduled.
+     */
+    public function canBeRescheduled(): bool
+    {
+        return $this->status->canBeRescheduled();
+    }
 
     public function user(): BelongsTo
     {
@@ -37,9 +55,9 @@ class Booking extends Model
         return $this->hasMany(BookingDetail::class);
     }
 
-    public function bookingOutbonds(): HasMany
+    public function bookingOutbounds(): HasMany
     {
-        return $this->hasMany(BookingOutbond::class);
+        return $this->hasMany(BookingOutbound::class);
     }
 
     public function payments(): HasMany

@@ -77,7 +77,7 @@ if (!function_exists('is_staff')) {
 
 if (!function_exists('is_customer')) {
     /**
-     * Check if the authenticated user is customer
+     * Check if the authenticated user is a regular user (customer)
      *
      * @return bool
      */
@@ -85,7 +85,7 @@ if (!function_exists('is_customer')) {
     {
         /** @var User|null $user */
         $user = Auth::user();
-        return Auth::check() && $user && $user->hasRole('customer');
+        return Auth::check() && $user && $user->hasRole('user');
     }
 }
 

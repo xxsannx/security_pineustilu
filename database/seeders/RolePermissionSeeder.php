@@ -59,10 +59,10 @@ class RolePermissionSeeder extends Seeder
             'delete items',
             
             // Outbound Management
-            'view outbonds',
-            'create outbonds',
-            'edit outbonds',
-            'delete outbonds',
+            'view outbounds',
+            'create outbounds',
+            'edit outbounds',
+            'delete outbounds',
             
             // Price Management
             'view prices',
@@ -124,9 +124,9 @@ class RolePermissionSeeder extends Seeder
             'view items',
             'create items',
             'edit items',
-            'view outbonds',
-            'create outbonds',
-            'edit outbonds',
+            'view outbounds',
+            'create outbounds',
+            'edit outbounds',
             'view prices',
             'create prices',
             'edit prices',
@@ -136,53 +136,24 @@ class RolePermissionSeeder extends Seeder
             'export reports',
         ]);
 
-        // Staff Role - limited permissions
-        $staffRole = Role::firstOrCreate(
-            ['name' => 'staff'],
+        // Staff Role - limited permissions (REMOVED - only 3 roles: super-admin, admin, user)
+        // NOTE: If staff role exists, users will be migrated to 'user' role
+
+        // User Role - basic permissions for registered users
+        $userRole = Role::firstOrCreate(
+            ['name' => 'user'],
             ['guard_name' => 'web']
         );
-        $staffRole->givePermissionTo([
+        $userRole->givePermissionTo([
+            'view areas',
+            'view facilities',
+            'view galleries',
+            'view items',
+            'view outbounds',
+            'view prices',
+            'create bookings',
             'view bookings',
-            'create bookings',
-            'edit bookings',
-            'view areas',
-            'view facilities',
-            'view galleries',
-            'view items',
-            'view outbonds',
-            'view prices',
             'view payments',
-        ]);
-
-        // Customer Role - basic permissions
-        $customerRole = Role::firstOrCreate(
-            ['name' => 'customer'],
-            ['guard_name' => 'web']
-        );
-        $customerRole->givePermissionTo([
-            'view areas',
-            'view facilities',
-            'view galleries',
-            'view items',
-            'view outbonds',
-            'view prices',
-            'create bookings',
-            'view bookings', // only their own bookings
-            'view payments', // only their own payments
-        ]);
-
-        // Guest Role - view only
-        $guestRole = Role::firstOrCreate(
-            ['name' => 'guest'],
-            ['guard_name' => 'web']
-        );
-        $guestRole->givePermissionTo([
-            'view areas',
-            'view facilities',
-            'view galleries',
-            'view items',
-            'view outbonds',
-            'view prices',
         ]);
 
         // Create a default super admin user if doesn't exist

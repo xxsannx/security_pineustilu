@@ -3,6 +3,8 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -11,7 +13,7 @@ use Illuminate\Support\Str;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable
+class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, TwoFactorAuthenticatable, HasRoles;
@@ -28,6 +30,7 @@ class User extends Authenticatable
         'google_id',
         'country_code',
         'phone',
+        'email_verified_at',
     ];
 
     /**
@@ -73,5 +76,15 @@ class User extends Authenticatable
     public function bookings(): HasMany
     {
         return $this->hasMany(Booking::class);
+    }
+
+    /**
+     * Determine if the user can access the Filament admin panel.
+     * Only super-admin and admin roles can access.
+     */
+    public function canAccessPanel(Panel $panel): bool
+    {
+        // Only super-admin and admin can access the admin panel
+        return $this->hasRole(['super-admin', 'admin']);
     }
 }

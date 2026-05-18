@@ -10,6 +10,7 @@ class Faq extends Model
     use HasFactory;
 
     protected $fillable = [
+        'slug',
         'question',
         'answer',
         'order_index',
@@ -18,4 +19,11 @@ class Faq extends Model
     protected $casts = [
         'order_index' => 'integer',
     ];
+
+    public function scopeOrdered($query)
+    {
+        return $query
+            ->orderBy('order_index')
+            ->orderBy('id');
+    }
 }

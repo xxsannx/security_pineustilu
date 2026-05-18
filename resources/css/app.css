@@ -1,18 +1,21 @@
-@import 'tailwindcss';
-@import '../../vendor/livewire/flux/dist/flux.css';
+@import "tailwindcss";
+@import "../../vendor/livewire/flux/dist/flux.css";
 
 @source '../views';
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../vendor/livewire/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../vendor/livewire/flux-pro/stubs/**/*.blade.php';
 @source '../../vendor/livewire/flux/stubs/**/*.blade.php';
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap");
 
 @theme {
-    --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif,
+        "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+        "Noto Color Emoji";
 
+    /* Existing colors */
     --color-zinc-50: #fafafa;
     --color-zinc-100: #f5f5f5;
     --color-zinc-200: #e5e5e5;
@@ -24,6 +27,12 @@
     --color-zinc-800: #262626;
     --color-zinc-900: #171717;
     --color-zinc-950: #0a0a0a;
+
+    /* Brand Colors - Pineus Tilu */
+    --color-brand-primary: #017249;
+    --color-brand-secondary: #0b5a3e;
+    --color-brand-text: #0b5a3e;
+    --color-brand-light: #f6fbf8;
 
     --color-accent: var(--color-neutral-800);
     --color-accent-content: var(--color-neutral-800);
@@ -38,24 +47,136 @@
     }
 }
 
+/* =========================
+    [FAQ Styles]
+    ========================= */
+@layer components {
+    .faq-list {
+        margin-top: 8px;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 18px;
+    }
+
+    .faq-item {
+        background: #fff;
+        border: 1px solid #e6e6e6;
+        border-radius: 14px;
+        padding: 0;
+        overflow: hidden;
+        box-shadow: 0 8px 26px rgba(3, 7, 18, 0.05);
+        transition: transform 0.12s ease, box-shadow 0.12s ease;
+        align-self: start;
+        min-height: 72px;
+    }
+
+    .faq-item:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 16px 36px rgba(3, 7, 18, 0.07);
+    }
+
+    .faq-q {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 18px 22px;
+        background: transparent;
+        border: 0;
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 16px;
+        text-align: left;
+    }
+
+    .faq-q:focus {
+        outline: 3px solid rgba(59, 130, 246, 0.12);
+        border-radius: 10px;
+    }
+
+    .icon-chevron {
+        transition: transform 0.25s ease;
+        color: #6b7280;
+    }
+
+    .icon-area {
+        transition: background-color 0.18s ease, color 0.18s ease,
+            transform 0.18s ease;
+        border-radius: 10px;
+        display: inline-flex;
+    }
+
+    .faq-title {
+        display: block;
+        color: #0f172a;
+    }
+
+    .faq-a {
+        padding: 8px 22px 18px 22px;
+    }
+
+    .faq-item[aria-open="true"] {
+        border-color: rgba(1, 120, 82, 0.12);
+        box-shadow: 0 18px 44px rgba(1, 120, 82, 0.06);
+    }
+
+    .faq-item[aria-open="true"] .icon-chevron {
+        transform: rotate(180deg);
+        color: #065f46;
+    }
+
+    .faq-item[aria-open="true"] .icon-area {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(1, 120, 82, 0.06);
+    }
+
+    @media (max-width: 640px) {
+        .faq-q {
+            padding: 12px;
+            font-size: 14px;
+            gap: 10px;
+        }
+
+        .icon-area {
+            width: 36px;
+            height: 36px;
+            min-width: 36px;
+        }
+
+        .icon-area svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .faq-a {
+            padding: 6px 12px 14px 12px;
+        }
+
+        .faq-item {
+            min-height: 60px;
+        }
+    }
+}
+
 @layer base {
     @font-face {
         font-family: 'JapaneseBrush';
-        src: url('/font/japanesebrush.ttf') format('truetype');
+        src: url('../../../public/font/japanesebrush.ttf') format('truetype');
         font-weight: normal;
         font-style: normal;
     }
 
     @font-face {
         font-family: 'Bizon';
-        src: url('/font/bizon.ttf') format('truetype');
+        src: url('../../../public/font/bizon.ttf') format('truetype');
         font-weight: normal;
         font-style: normal;
     }
 
     @font-face {
         font-family: 'Veteran';
-        src: url('/font/veteran.ttf') format('truetype');
+        src: url('../../../public/font/veteran.ttf') format('truetype');
         font-weight: normal;
         font-style: normal;
     }
@@ -67,6 +188,45 @@
     ::file-selector-button {
         border-color: var(--color-gray-200, currentColor);
     }
+
+    .font-poppins {
+        font-family: 'Poppins', ui-sans-serif, system-ui, sans-serif;
+    }
+
+    /* Custom Animations for Profile */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-fadeInUp {
+        animation: fadeInUp 0.3s ease-out forwards;
+    }
+
+    /* Mobile menu styles */
+    @media (max-width: 1023px) {
+        #navigationMenu.show {
+            display: block;
+            animation: slideDown 0.3s ease-out forwards;
+        }
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 }
 
 [data-flux-field]:not(ui-radio, ui-checkbox) {
@@ -74,7 +234,7 @@
 }
 
 [data-flux-label] {
-    @apply  !mb-0 !leading-tight;
+    @apply !mb-0 !leading-tight;
 }
 
 input:focus[data-flux-control],
@@ -82,7 +242,62 @@ textarea:focus[data-flux-control],
 select:focus[data-flux-control] {
     @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
 }
+/* =========================
+   Custom Scrollbar Styles
+   ========================= */
+/* Custom scrollbar for table container */
+#tableContent::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
 
-/* \[:where(&)\]:size-4 {
-    @apply size-4;
-} */
+#tableContent::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+#tableContent::-webkit-scrollbar-thumb {
+    background: #017249;
+    border-radius: 10px;
+    transition: background 0.3s ease;
+}
+
+#tableContent::-webkit-scrollbar-thumb:hover {
+    background: #0b5a3e;
+}
+
+/* For Firefox */
+#tableContent {
+    scrollbar-width: thin;
+    scrollbar-color: #017249 #f1f1f1;
+    scroll-behavior: smooth;
+}
+
+/* =========================
+   Availability Table Enhancements
+   ========================= */
+
+/* Better row hover effect */
+#tableBody tr {
+    transition: background-color 150ms ease, transform 100ms ease;
+}
+
+#tableBody tr:hover {
+    transform: translateY(-1px);
+}
+
+/* Sticky date column shadow */
+#tableBody td:first-child {
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Table cell animations */
+@keyframes cellPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
+/* Loading animation for cells */
+.availability-loading {
+    animation: cellPulse 1.5s ease-in-out infinite;
+}

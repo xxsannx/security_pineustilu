@@ -13,7 +13,8 @@ class Price extends Model
     protected $fillable = [
         'unit_id',
         'item_id',
-        'outbond_id',
+        'outbound_id',
+        'outbound_variant_id',
         'season_id',
         'price',
     ];
@@ -32,9 +33,14 @@ class Price extends Model
         return $this->belongsTo(Item::class);
     }
 
-    public function outbond(): BelongsTo
+    public function outbound(): BelongsTo
     {
-        return $this->belongsTo(Outbond::class);
+        return $this->belongsTo(Outbound::class);
+    }
+
+    public function outboundVariant(): BelongsTo
+    {
+        return $this->belongsTo(OutboundVariant::class);
     }
 
     public function season(): BelongsTo

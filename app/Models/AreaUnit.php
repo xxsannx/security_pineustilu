@@ -6,7 +6,21 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
+/**
+ * @property int $id
+ * @property int $area_id
+ * @property string $name
+ * @property int $default_people
+ * @property int $max_people
+ * @property string|null $tent_type
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read Area $area
+ * @property-read Collection<int, BookingDetail> $bookingDetails
+ * @property-read Collection<int, Price> $prices
+ */
 class AreaUnit extends Model
 {
     use HasFactory;

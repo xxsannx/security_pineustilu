@@ -39,24 +39,24 @@ class RegisterRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.required' => 'Nama lengkap wajib diisi.',
-            'name.string' => 'Nama harus berupa teks.',
-            'name.max' => 'Nama maksimal 255 karakter.',
+            'name.required' => 'Full name is required.',
+            'name.string' => 'Name must be text.',
+            'name.max' => 'Name maximum 255 characters.',
             
-            'email.required' => 'Email wajib diisi.',
-            'email.email' => 'Format email tidak valid.',
-            'email.unique' => 'Email sudah terdaftar.',
+            'email.required' => 'Email is required.',
+            'email.email' => 'Invalid email format.',
+            'email.unique' => 'Email is already registered.',
             
-            'country_code.required' => 'Kode negara wajib dipilih.',
+            'country_code.required' => 'Country code is required.',
             
-            'phone.required' => 'Nomor telepon wajib diisi.',
-            'phone.min' => 'Nomor telepon minimal 8 digit.',
-            'phone.max' => 'Nomor telepon maksimal 13 digit.',
-            'phone.regex' => 'Nomor telepon hanya boleh berisi angka.',
+            'phone.required' => 'Phone number is required.',
+            'phone.min' => 'Phone number minimum 8 digits.',
+            'phone.max' => 'Phone number maximum 13 digits.',
+            'phone.regex' => 'Phone number can only contain numbers.',
             
-            'password.required' => 'Password wajib diisi.',
-            'password.confirmed' => 'Konfirmasi password tidak cocok.',
-            'password.min' => 'Password minimal 8 karakter.',
+            'password.required' => 'Password is required.',
+            'password.confirmed' => 'Password confirmation does not match.',
+            'password.min' => 'Password minimum 8 characters.',
         ];
     }
 

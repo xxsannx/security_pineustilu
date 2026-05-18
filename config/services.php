@@ -1,7 +1,6 @@
 <?php
 
 return [
-
     /*
     |--------------------------------------------------------------------------
     | Third Party Services
@@ -35,4 +34,12 @@ return [
         ],
     ],
 
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID', env('GOOGLE_OAUTH_CLIENT_ID')),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET', env('GOOGLE_OAUTH_CLIENT_SECRET')),
+        'redirect' => env(
+            'GOOGLE_REDIRECT_URI',
+            rtrim(env('APP_URL', 'http://localhost:8000'), '/') . '/auth/google/callback'
+        ),
+    ],
 ];

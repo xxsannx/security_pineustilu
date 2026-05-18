@@ -1,0 +1,47 @@
+/**
+ * Authentication pages custom styles
+ * Complements Tailwind CSS with complex decorative elements
+ */
+
+/* Auth page background with decorative gradient circles */
+.auth-background {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
+    position: relative;
+    overflow-x: hidden;
+    width: 100%;
+    min-height: 100vh;
+}
+
+/* Top-right decorative circle */
+.auth-background::before {
+    content: '';
+    position: fixed;
+    top: -50%;
+    right: -10%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(1, 114, 73, 0.1) 0%, transparent 70%);
+    border-radius: 50%;
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* Bottom-left decorative circle */
+.auth-background::after {
+    content: '';
+    position: fixed;
+    bottom: -30%;
+    left: -10%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(1, 133, 86, 0.08) 0%, transparent 70%);
+    border-radius: 50%;
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* Ensure content stays above decorative elements */
+.auth-content {
+    position: relative;
+    z-index: 10;
+}

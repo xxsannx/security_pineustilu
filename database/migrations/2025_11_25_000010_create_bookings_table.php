@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('bookings', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
-            $table->string('booking_type'); // glamping, outbond
+            $table->string('booking_type'); // glamping, outbound
             $table->date('booking_date');
             $table->string('token_code')->unique();
             $table->string('status')->default('proses'); // proses, pembayaran, berhasil, berjalan, selesai

@@ -36,26 +36,31 @@ class CreateNewUser implements CreatesNewUsers
             'phone' => ['required', 'string', 'min:8', 'max:13', 'regex:/^[0-9]+$/'],
             'password' => $this->passwordRules(),
         ], [
-            'name.required' => 'Nama lengkap wajib diisi.',
-            'name.max' => 'Nama maksimal 255 karakter.',
-            'email.required' => 'Email wajib diisi.',
-            'email.email' => 'Format email tidak valid.',
-            'email.unique' => 'Email sudah terdaftar.',
-            'country_code.required' => 'Kode negara wajib dipilih.',
-            'phone.required' => 'Nomor telepon wajib diisi.',
-            'phone.min' => 'Nomor telepon minimal 8 digit.',
-            'phone.max' => 'Nomor telepon maksimal 13 digit.',
-            'phone.regex' => 'Nomor telepon hanya boleh berisi angka.',
-            'password.required' => 'Password wajib diisi.',
-            'password.confirmed' => 'Konfirmasi password tidak cocok.',
+            'name.required' => 'Full name is required.',
+            'name.max' => 'Name maximum 255 characters.',
+            'email.required' => 'Email is required.',
+            'email.email' => 'Invalid email format.',
+            'email.unique' => 'Email is already registered.',
+            'country_code.required' => 'Country code is required.',
+            'phone.required' => 'Phone number is required.',
+            'phone.min' => 'Phone number minimum 8 digits.',
+            'phone.max' => 'Phone number maximum 13 digits.',
+            'phone.regex' => 'Phone number can only contain numbers.',
+            'password.required' => 'Password is required.',
+            'password.confirmed' => 'Password confirmation does not match.',
         ])->validate();
 
-        return User::create([
+        $user = User::create([
             'name' => $input['name'],
             'email' => $input['email'],
             'country_code' => $input['country_code'],
             'phone' => $input['phone'],
             'password' => $input['password'],
         ]);
+
+        // Assign user role to new registered user
+        $user->assignRole('user');
+
+        return $user;
     }
 }

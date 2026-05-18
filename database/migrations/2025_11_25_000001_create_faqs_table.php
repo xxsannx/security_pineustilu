@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('faqs', function (Blueprint $table) {
             $table->id();
+            $table->string('slug')->unique();
             $table->text('question');
             $table->text('answer');
             $table->integer('order_index')->default(0);

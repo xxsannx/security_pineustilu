@@ -14,6 +14,11 @@ class Item extends Model
         'name',
         'description',
         'type',
+        'price',
+    ];
+
+    protected $casts = [
+        'price' => 'decimal:2',
     ];
 
     public function bookingDetails(): HasMany

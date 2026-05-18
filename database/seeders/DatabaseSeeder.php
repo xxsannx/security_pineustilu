@@ -16,15 +16,46 @@ class DatabaseSeeder extends Seeder
         // Call RolePermissionSeeder first to create roles and permissions
         $this->call([
             RolePermissionSeeder::class,
+            AreaSeeder::class,
+            AreaUnitSeeder::class,
+            SeasonDateSeeder::class,
+            TentPriceSeeder::class,
+            ItemSeeder::class,
+            ItemPriceSeeder::class,
+
+            // Outbound data
+            OutboundSeeder::class,
+            OutboundVariantSeeder::class,
+            OutboundVariantPriceSeeder::class,
+            OutboundPriceSeeder::class,
+
+            PineusTilu1Seeder::class,
+            PineusTilu2Seeder::class,
+            PineusTilu3Seeder::class,
+            PineusTilu4Seeder::class,
+            PineusTiluCabinSeeder::class,
+            PineusTiluCabinVVIPSeeder::class,
+            
+            // Gallery data
+            GallerySeeder::class,
+
+            // FAQ data
+            FaqSeeder::class,
         ]);
 
         // User::factory(10)->create();
 
-        // Create test user with customer role
-        $testUser = User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
-        $testUser->assignRole('customer');
+        // Create test user with user role (use firstOrCreate to avoid duplicate)
+        $testUser = User::firstOrCreate(
+            ['email' => 'test@example.com'],
+            [
+                'name' => 'Test User',
+                'password' => bcrypt('password'),
+            ]
+        );
+        
+        if (!$testUser->hasRole('user')) {
+            $testUser->assignRole('user');
+        }
     }
 }

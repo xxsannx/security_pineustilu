@@ -11,15 +11,37 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('outbonds', function (Blueprint $table) {
+        Schema::create('outbounds', function (Blueprint $table) {
             $table->id();
             $table->string('name');
+            $table->string('slug')->unique();
             $table->text('description')->nullable();
-            $table->integer('pax')->default(0);
-            $table->integer('min_participation')->default(0);
-            $table->integer('max_participation')->default(0);
+            
+            // 'per_pax' = per orang (Flying Fox, Paintball, Team Building, ATV)
+            // 'per_unit' = per unit seperti mobil/perahu (Offroad, Rafting)
+            $table->enum('pricing_type', ['per_pax', 'per_unit'])->default('per_pax');
+            $table->string('unit_name')->nullable(); // perahu, mobil, etc
+            
+            // Participant limits
+            $table->integer('min_participants')->default(1);
+            $table->integer('max_participants')->nullable(); // null = unlimited
+            $table->integer('min_age')->nullable();
+
             $table->integer('duration')->nullable(); // in minutes
-            $table->integer('age')->nullable(); // minimum age requirement
+            $table->decimal('distance', 8, 2)->nullable(); // in km
+            
+            // Special features flags
+            $table->boolean('has_variants')->default(false); // for ATV (single/double)
+            $table->boolean('allows_documentation_addon')->default(false); // for rafting
+            
+            // Transportaasi (Rp 200k/mobil kecuali Rafting & Offroad)
+            $table->boolean('requires_transportation')->default(true); // false for Rafting & Offroad
+            
+            $table->boolean('has_camping_package')->default(false); // Kemah + Arung Jeram
+            
+            $table->boolean('is_active')->default(true);
+            $table->integer('sort_order')->default(0);
+            
             $table->timestamps();
         });
     }
@@ -29,6 +51,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('outbonds');
+        Schema::dropIfExists('outbounds');
     }
 };
