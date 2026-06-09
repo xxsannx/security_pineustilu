@@ -38,8 +38,13 @@ class MidtransService
                 $booking->load('bookingOutbounds');
             }
 
-            // Calculate total amount
-            $totalAmount = $this->calculateBookingTotal($booking);
+            // Detect reschedule with additional payment required
+            $reschedulePayable = $this->getReschedulePayableAmount($booking);
+
+            // Calculate total amount: use payable (selisih) for reschedule, full total otherwise
+            $totalAmount = $reschedulePayable !== null
+                ? $reschedulePayable
+                : $this->calculateBookingTotal($booking);
 
             if ($totalAmount <= 0) {
                 Log::error('Invalid booking amount for booking: ' . $booking->id);
@@ -47,7 +52,7 @@ class MidtransService
             }
 
             // Prepare transaction details
-            $transactionData = $this->prepareTransactionData($booking, $totalAmount);
+            $transactionData = $this->prepareTransactionData($booking, $totalAmount, $reschedulePayable !== null);
 
             // Call Midtrans API
             $response = Http::withBasicAuth($this->serverKey, '')
@@ -56,7 +61,7 @@ class MidtransService
             if (!$response->successful()) {
                 Log::error('Midtrans API Error', [
                     'status' => $response->status(),
-                    'body' => $response->body(),
+                    'body'   => $response->body(),
                     'booking_id' => $booking->id,
                 ]);
                 return null;
@@ -67,7 +72,7 @@ class MidtransService
 
             if (!$snapToken) {
                 Log::error('No token in Midtrans response', [
-                    'response' => $responseData,
+                    'response'   => $responseData,
                     'booking_id' => $booking->id,
                 ]);
                 return null;
@@ -82,8 +87,10 @@ class MidtransService
             );
 
             Log::info('Snap token generated successfully', [
-                'booking_id' => $booking->id,
-                'order_id' => $transactionData['transaction_details']['order_id'],
+                'booking_id'       => $booking->id,
+                'order_id'         => $transactionData['transaction_details']['order_id'],
+                'is_reschedule'    => $reschedulePayable !== null,
+                'charged_amount'   => $totalAmount,
             ]);
 
             return $snapToken;
@@ -91,21 +98,48 @@ class MidtransService
         } catch (Exception $e) {
             Log::error('Error generating Snap token: ' . $e->getMessage(), [
                 'booking_id' => $booking->id,
-                'exception' => $e,
+                'exception'  => $e,
             ]);
             return null;
         }
     }
 
     /**
+     * Check if booking is a reschedule that requires additional payment.
+     * Returns the payable amount (selisih) if applicable, null otherwise.
+     */
+    private function getReschedulePayableAmount(Booking $booking): ?int
+    {
+        $detail = $booking->bookingDetails->first();
+        if (!$detail || !$detail->note) {
+            return null;
+        }
+
+        $note = json_decode($detail->note, true);
+        $ri   = $note['reschedule_info'] ?? null;
+
+        if (!$ri || empty($ri['is_reschedule'])) {
+            return null;
+        }
+
+        if (($ri['payment_status'] ?? '') !== 'payment_required') {
+            return null;
+        }
+
+        $payable = (float) ($ri['payable_amount'] ?? $ri['price_delta'] ?? 0);
+
+        return $payable > 0 ? (int) $payable : null;
+    }
+
+    /**
      * Prepare transaction data for Midtrans API
      */
-    private function prepareTransactionData(Booking $booking, int $totalAmount): array
+    private function prepareTransactionData(Booking $booking, int $totalAmount, bool $isReschedulePayment = false): array
     {
         $orderId = $this->generateOrderId($booking);
 
         // Get booking details for item details
-        $itemDetails = $this->buildItemDetails($booking);
+        $itemDetails = $this->buildItemDetails($booking, $isReschedulePayment, $totalAmount);
 
         return [
             'transaction_details' => [
@@ -131,21 +165,40 @@ class MidtransService
     }
 
     /**
-     * Build item details from booking
+     * Build item details from booking.
+     * For reschedule payments, a single line item for the price difference is used.
      */
-    private function buildItemDetails(Booking $booking): array
+    private function buildItemDetails(Booking $booking, bool $isReschedulePayment = false, int $rescheduleAmount = 0): array
     {
+        // For reschedule top-up payments, show a single 'Selisih Reschedule' line item
+        if ($isReschedulePayment && $rescheduleAmount > 0) {
+            $detail = $booking->bookingDetails->first();
+            $note   = $detail && $detail->note ? json_decode($detail->note, true) : [];
+            $ri     = $note['reschedule_info'] ?? [];
+            $newArea = $ri['new']['area_name'] ?? ($detail?->unit?->area?->name ?? 'Glamping');
+            $newUnit = $ri['new']['unit_name'] ?? ($detail?->unit?->name ?? 'Unit');
+
+            return [
+                [
+                    'id'       => 'reschedule_diff_' . $booking->id,
+                    'price'    => $rescheduleAmount,
+                    'quantity' => 1,
+                    'name'     => 'Selisih Reschedule – ' . $newArea . ' ' . $newUnit,
+                ],
+            ];
+        }
+
         $items = [];
         $totalPrice = 0;
 
         // Add accommodation items from booking details
         foreach ($booking->bookingDetails as $detail) {
-            $price = (int) $detail->total_price;
-            $totalPrice += $price;
+            $basePrice = (int) $detail->total_price - (int) $detail->total_extra_charge;
+            $totalPrice += $basePrice;
 
             $items[] = [
                 'id' => 'unit_' . $detail->unit_id,
-                'price' => $price,
+                'price' => $basePrice,
                 'quantity' => 1,
                 'name' => ($detail->unit?->name ?? 'Accommodation') .
                          ' (' . $detail->check_in->format('M d') . ' - ' . $detail->check_out->format('M d') . ')',
@@ -191,7 +244,6 @@ class MidtransService
         // Sum booking details
         foreach ($booking->bookingDetails as $detail) {
             $total += (int) $detail->total_price;
-            $total += (int) $detail->total_extra_charge;
         }
 
         // Sum outbound prices

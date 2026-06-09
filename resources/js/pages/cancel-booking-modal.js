@@ -68,6 +68,15 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
+        // Confirm return to main menu
+        const confirmReturnMainMenu = document.getElementById('confirmReturnMainMenu');
+        if (confirmReturnMainMenu) {
+            confirmReturnMainMenu.addEventListener('click', function() {
+                // Redirect to home page
+                window.location.href = '/';
+            });
+        }
+
         // Close on backdrop click
         cancelModal.addEventListener('click', function(e) {
             if (e.target === cancelModal) {

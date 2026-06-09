@@ -111,19 +111,21 @@
             @csrf
             @method('PUT')
             <input type="hidden" name="field" value="password">
+            {{-- Hidden username field for accessibility and password managers --}}
+            <input type="email" autocomplete="username" value="{{ auth()->user()->email }}" class="hidden" style="display: none;">
             <div class="mb-4">
                 <label class="block text-sm font-semibold text-gray-700 mb-2 font-poppins">Current Password</label>
-                <input type="password" name="current_password" required
+                <input type="password" name="current_password" required autocomplete="current-password"
                     class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#017249] focus:border-transparent font-poppins">
             </div>
             <div class="mb-4">
                 <label class="block text-sm font-semibold text-gray-700 mb-2 font-poppins">New Password</label>
-                <input type="password" name="password" required
+                <input type="password" name="password" required autocomplete="new-password"
                     class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#017249] focus:border-transparent font-poppins">
             </div>
             <div class="mb-6">
                 <label class="block text-sm font-semibold text-gray-700 mb-2 font-poppins">Confirm New Password</label>
-                <input type="password" name="password_confirmation" required
+                <input type="password" name="password_confirmation" required autocomplete="new-password"
                     class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#017249] focus:border-transparent font-poppins">
             </div>
             <div class="flex gap-3">

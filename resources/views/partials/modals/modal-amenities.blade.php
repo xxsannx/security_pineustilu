@@ -75,7 +75,7 @@
                                 <div class="text-xs text-gray-500">{{ $it['description'] ?? '' }}</div>
                                 <div class="text-sm font-medium text-[#017249] mt-1">{{ $priceText }}</div>
                             </div>
-                            <input form="reservasiForm" type="hidden" class="amenity-qty-input" name="amenities[{{ $it['id'] }}]" value="0" data-item-id="{{ $it['id'] }}" data-item-name="{{ $it['name'] ?? '' }}" data-price="{{ $it['price'] ?? 0 }}" data-type="{{ $it['type'] ?? '' }}">
+                            <input form="{{ $formId ?? 'reservasiForm' }}" type="hidden" class="amenity-qty-input" name="amenities[{{ $it['id'] }}]" value="0" data-item-id="{{ $it['id'] }}" data-item-name="{{ $it['name'] ?? '' }}" data-price="{{ $it['price'] ?? 0 }}" data-type="{{ $it['type'] ?? '' }}">
                             <div class="flex items-center gap-1 bg-gray-100 rounded-2xl p-1">
                                 <button type="button" class="amenity-qty-decrease w-8 h-8 flex items-center justify-center text-[#017249] hover:bg-[#017249] hover:text-white rounded-md transition-all duration-200 font-bold text-lg cursor-pointer" data-item-id="{{ $it['id'] }}">−</button>
                                 <span class="amenity-qty-display w-8 text-center font-semibold text-gray-700 text-sm">0</span>
@@ -115,7 +115,7 @@
                                 <div class="text-xs text-gray-500">{{ $it['description'] ?? '' }}</div>
                                 <div class="text-sm font-medium text-[#017249] mt-1">{{ $priceText }}</div>
                             </div>
-                            <input form="reservasiForm" type="hidden" class="amenity-qty-input" name="amenities[{{ $it['id'] }}]" value="0" data-item-id="{{ $it['id'] }}" data-item-name="{{ $it['name'] ?? '' }}" data-price="{{ $it['price'] ?? 0 }}" data-type="{{ $it['type'] ?? '' }}">
+                            <input form="{{ $formId ?? 'reservasiForm' }}" type="hidden" class="amenity-qty-input" name="amenities[{{ $it['id'] }}]" value="0" data-item-id="{{ $it['id'] }}" data-item-name="{{ $it['name'] ?? '' }}" data-price="{{ $it['price'] ?? 0 }}" data-type="{{ $it['type'] ?? '' }}">
                             <div class="flex items-center gap-1 bg-gray-100 rounded-2xl p-1">
                                 <button type="button" class="amenity-qty-decrease w-8 h-8 flex items-center justify-center text-[#017249] hover:bg-[#017249] hover:text-white rounded-md transition-all duration-200 font-bold text-lg cursor-pointer" data-item-id="{{ $it['id'] }}">−</button>
                                 <span class="amenity-qty-display w-8 text-center font-semibold text-gray-700 text-sm">0</span>

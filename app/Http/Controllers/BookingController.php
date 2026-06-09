@@ -950,6 +950,49 @@ class BookingController extends Controller
             ? $checkoutDate->translatedFormat('l, d M Y')
             : '-';
 
+        // Build reschedule comparison info if this booking was rescheduled
+        $rescheduleInfo = null;
+        if (!empty($note['reschedule_info']['is_reschedule'])) {
+            $ri = $note['reschedule_info'];
+            $origCheckinFormatted = isset($ri['original']['checkin'])
+                ? Carbon::parse($ri['original']['checkin'])->translatedFormat('l, d M Y')
+                : '-';
+            $origCheckoutFormatted = isset($ri['original']['checkout'])
+                ? Carbon::parse($ri['original']['checkout'])->translatedFormat('l, d M Y')
+                : '-';
+            $newCheckinFormatted = isset($ri['new']['checkin'])
+                ? Carbon::parse($ri['new']['checkin'])->translatedFormat('l, d M Y')
+                : '-';
+            $newCheckoutFormatted = isset($ri['new']['checkout'])
+                ? Carbon::parse($ri['new']['checkout'])->translatedFormat('l, d M Y')
+                : '-';
+
+            $rescheduleInfo = [
+                'payment_status'  => $ri['payment_status'] ?? 'no_payment_required',
+                'price_delta'     => (float) ($ri['price_delta'] ?? 0),
+                'payable_amount'  => (float) ($ri['payable_amount'] ?? 0),
+                'payable_display' => $this->formatIdr(abs((float) ($ri['price_delta'] ?? 0))),
+                'original' => [
+                    'checkin'      => $origCheckinFormatted,
+                    'checkout'     => $origCheckoutFormatted,
+                    'area_name'    => $ri['original']['area_name'] ?? '-',
+                    'unit_name'    => $ri['original']['unit_name'] ?? '-',
+                    'base_price'   => $this->formatIdr((float) ($ri['original']['base_price'] ?? 0)),
+                    'extra_charge' => $this->formatIdr((float) ($ri['original']['extra_charge'] ?? 0)),
+                    'total_price'  => $this->formatIdr((float) ($ri['original']['total_price'] ?? 0)),
+                ],
+                'new' => [
+                    'checkin'      => $newCheckinFormatted,
+                    'checkout'     => $newCheckoutFormatted,
+                    'area_name'    => $ri['new']['area_name'] ?? '-',
+                    'unit_name'    => $ri['new']['unit_name'] ?? '-',
+                    'base_price'   => $this->formatIdr((float) ($ri['new']['base_price'] ?? 0)),
+                    'extra_charge' => $this->formatIdr((float) ($ri['new']['extra_charge'] ?? 0)),
+                    'total_price'  => $this->formatIdr((float) ($ri['new']['total_price'] ?? 0)),
+                ],
+            ];
+        }
+
         return view('reservasi.detail-pesanan', [
             'token' => $token,
             'status' => $status,
@@ -968,6 +1011,7 @@ class BookingController extends Controller
             'totalExtraCharge' => $this->formatIdr($totalExtraCharge),
             'amenities' => $amenities,
             'additionalCosts' => $additionalCosts,
+            'rescheduleInfo' => $rescheduleInfo,
         ]);
     }
 
@@ -1058,7 +1102,7 @@ class BookingController extends Controller
         $newStatus = $request->input('status');
 
         $validTransitions = [
-            'proses' => ['pembayaran', 'dibatalkan'],
+            'proses' => ['pembayaran', 'berhasil', 'dibatalkan'], // 'berhasil' allowed for reschedule with no extra payment
             'pembayaran' => ['berhasil', 'dibatalkan'],
             'berhasil' => ['berjalan'],
             'berjalan' => ['selesai'],
@@ -1223,7 +1267,7 @@ class BookingController extends Controller
             'unit_id' => ['required', 'integer', 'exists:area_units,id'],
         ]);
 
-        $booking = Booking::with(['bookingDetails'])->where('token_code', strtoupper(trim($token)))->firstOrFail();
+        $booking = Booking::with(['bookingDetails.unit.area'])->where('token_code', strtoupper(trim($token)))->firstOrFail();
 
         if ($booking->booking_type !== 'glamping') {
             return redirect()->route('reschedule')->with('error', 'Reschedule hanya tersedia untuk Glamping di halaman ini.');
@@ -1238,10 +1282,10 @@ class BookingController extends Controller
             return redirect()->route('reschedule')->with('error', 'Rincian booking tidak ditemukan.');
         }
 
-        // Use original guest count and original amenities selection by default
-        $guestCount = (int) $detail->number_of_people;
+        // Use new guest count from request if provided, otherwise original
+        $guestCount = $request->has('guestCount') ? (int) $request->input('guestCount') : (int) $detail->number_of_people;
 
-        $unit = AreaUnit::query()->with(['area:id,slug,extra_charge_breakfast,extra_charge_full'])->findOrFail((int) $request->input('unit_id'));
+        $unit = AreaUnit::query()->with(['area:id,slug,name,extra_charge_breakfast,extra_charge_full'])->findOrFail((int) $request->input('unit_id'));
 
         $checkin = Carbon::parse($request->input('checkin'))->startOfDay();
         $checkout = Carbon::parse($request->input('checkout'))->startOfDay();
@@ -1253,35 +1297,65 @@ class BookingController extends Controller
         $pricing = $this->pricingService->getUnitBasePriceForRange($unit->id, $checkin, $checkout);
         $basePrice = (float) ($pricing['total'] ?? 0.0);
 
-        // Reconstruct amenities from original note (if any)
+        // Extract amenity quantities from form data if provided, otherwise fallback to original
         $note = $detail && $detail->note ? json_decode($detail->note, true) : [];
-        $amenitiesBreakdown = $note['amenities_breakdown'] ?? [];
-
-        $amenityIds = array_values(array_filter(array_map(fn($i) => (int) ($i['id'] ?? 0), $amenitiesBreakdown)));
-        if (!empty($amenityIds)) {
-            $amenities = Item::with('prices')->whereIn('id', $amenityIds)->get();
-        } else {
-            $amenities = collect();
-        }
         $amenityBreakdown = [];
         $extraChargeAmenities = 0.0;
-        foreach ($amenitiesBreakdown as $itemRow) {
-            $itemId = (int) ($itemRow['id'] ?? 0);
-            $qty = max(0, (int) ($itemRow['qty'] ?? 0));
-            if ($qty <= 0) continue;
-            $itemModel = $amenities->firstWhere('id', $itemId);
-            $latest = $itemModel?->prices->sortByDesc('created_at')->first();
-            $unitPrice = $latest ? (float) $latest->price : (float) ($itemRow['unit_price'] ?? 0.0);
-            $lineTotal = $unitPrice * $qty;
-            $extraChargeAmenities += $lineTotal;
-            $amenityBreakdown[] = [
-                'id' => $itemId,
-                'name' => $itemRow['name'] ?? ($itemModel?->name ?? 'Item'),
-                'type' => $itemRow['type'] ?? ($itemModel?->type ?? null),
-                'unit_price' => $unitPrice,
-                'qty' => $qty,
-                'line_total' => $lineTotal,
-            ];
+
+        if ($request->has('amenities')) {
+            $amenityQuantities = [];
+            foreach (($request->input('amenities') ?? []) as $itemId => $qty) {
+                $qtyNum = (int) $qty;
+                if ($qtyNum > 0) {
+                    $amenityQuantities[(int) $itemId] = $qtyNum;
+                }
+            }
+            if (!empty($amenityQuantities)) {
+                $amenities = Item::with('prices')->whereIn('id', array_keys($amenityQuantities))->get();
+                foreach ($amenities as $itemModel) {
+                    $qty = $amenityQuantities[$itemModel->id] ?? 0;
+                    $latest = $itemModel->prices->sortByDesc('created_at')->first();
+                    $unitPrice = $latest ? (float) $latest->price : 0.0;
+                    $lineTotal = $unitPrice * $qty;
+                    $extraChargeAmenities += $lineTotal;
+                    $amenityBreakdown[] = [
+                        'id' => $itemModel->id,
+                        'name' => $itemModel->name,
+                        'type' => $itemModel->type,
+                        'unit_price' => $unitPrice,
+                        'qty' => $qty,
+                        'line_total' => $lineTotal,
+                    ];
+                }
+            }
+        } else {
+            // Reconstruct amenities from original note
+            $amenitiesBreakdownOriginal = $note['amenities_breakdown'] ?? [];
+            $amenityIds = array_values(array_filter(array_map(fn($i) => (int) ($i['id'] ?? 0), $amenitiesBreakdownOriginal)));
+            if (!empty($amenityIds)) {
+                $amenities = Item::with('prices')->whereIn('id', $amenityIds)->get();
+            } else {
+                $amenities = collect();
+            }
+            
+            foreach ($amenitiesBreakdownOriginal as $itemRow) {
+                $itemId = (int) ($itemRow['id'] ?? 0);
+                $qty = max(0, (int) ($itemRow['qty'] ?? 0));
+                if ($qty <= 0) continue;
+                $itemModel = $amenities->firstWhere('id', $itemId);
+                $latest = $itemModel?->prices->sortByDesc('created_at')->first();
+                $unitPrice = $latest ? (float) $latest->price : (float) ($itemRow['unit_price'] ?? 0.0);
+                $lineTotal = $unitPrice * $qty;
+                $extraChargeAmenities += $lineTotal;
+                $amenityBreakdown[] = [
+                    'id' => $itemId,
+                    'name' => $itemRow['name'] ?? ($itemModel?->name ?? 'Item'),
+                    'type' => $itemRow['type'] ?? ($itemModel?->type ?? null),
+                    'unit_price' => $unitPrice,
+                    'qty' => $qty,
+                    'line_total' => $lineTotal,
+                ];
+            }
         }
 
         // Extra guest charge computation (use original or form provided mode)
@@ -1301,8 +1375,33 @@ class BookingController extends Controller
 
         $originalTotal = (float) $detail->total_price;
 
+        // Calculate price delta for payment routing
+        $priceDelta = $newTotalPrice - $originalTotal;
+        $paymentStatus = match(true) {
+            $priceDelta > 0 => 'payment_required',
+            $priceDelta < 0 => 'refund_due',
+            default => 'no_payment_required',
+        };
+
+        // Capture original data before overwriting for reschedule info display
+        $originalCheckin  = $detail->check_in ? $detail->check_in->toDateString() : null;
+        $originalCheckout = $detail->check_out ? $detail->check_out->toDateString() : null;
+        $originalUnitId   = (int) $detail->unit_id;
+        $originalBasePrice = $originalTotal - (float) $detail->total_extra_charge;
+        $originalExtraCharge = (float) $detail->total_extra_charge;
+        $originalUnitName = $detail->unit?->name ?? '-';
+        $originalAreaName = $detail->unit?->area?->name ?? '-';
+
         // Update DB inside transaction
-        DB::transaction(function () use ($detail, $unit, $checkin, $checkout, $guestCount, $totalExtraCharge, $newTotalPrice, $amenityBreakdown, $extraPeople, $selectedExtraRate, $extraChargeMode, $fullRate, $breakfastRate, $booking, $originalTotal, $pricing, $defaultPeople, $extraChargeGuestMode) {
+        DB::transaction(function () use (
+            $detail, $unit, $checkin, $checkout, $guestCount, $totalExtraCharge,
+            $newTotalPrice, $amenityBreakdown, $extraPeople, $selectedExtraRate,
+            $extraChargeMode, $fullRate, $breakfastRate, $booking, $originalTotal,
+            $pricing, $defaultPeople, $extraChargeGuestMode, $basePrice,
+            $priceDelta, $paymentStatus,
+            $originalCheckin, $originalCheckout, $originalUnitId, $originalUnitName,
+            $originalAreaName, $originalBasePrice, $originalExtraCharge
+        ) {
             $detail->unit_id = $unit->id;
             $detail->check_in = $checkin->toDateString();
             $detail->check_out = $checkout->toDateString();
@@ -1332,22 +1431,51 @@ class BookingController extends Controller
                     'breakfast' => $breakfastRate,
                 ],
                 'extra_charge_mode' => $extraChargeMode,
+                // Reschedule comparison metadata for display in Order Details
+                'reschedule_info' => [
+                    'is_reschedule' => true,
+                    'reschedule_date' => now()->toDateString(),
+                    'payment_status' => $paymentStatus,
+                    'price_delta' => $priceDelta,
+                    'payable_amount' => abs($priceDelta),
+                    'original' => [
+                        'checkin' => $originalCheckin,
+                        'checkout' => $originalCheckout,
+                        'unit_id' => $originalUnitId,
+                        'unit_name' => $originalUnitName,
+                        'area_name' => $originalAreaName,
+                        'base_price' => $originalBasePrice,
+                        'extra_charge' => $originalExtraCharge,
+                        'total_price' => $originalTotal,
+                    ],
+                    'new' => [
+                        'checkin' => $checkin->toDateString(),
+                        'checkout' => $checkout->toDateString(),
+                        'unit_id' => $unit->id,
+                        'unit_name' => $unit->name,
+                        'area_name' => $unit->area?->name ?? '-',
+                        'base_price' => $basePrice,
+                        'extra_charge' => $totalExtraCharge,
+                        'total_price' => $newTotalPrice,
+                    ],
+                ],
             ]);
 
             $detail->note = json_encode($merged, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-
             $detail->save();
 
-            // Update booking status depending on price difference
-            if ($newTotalPrice > $originalTotal) {
-                $booking->status = BookingStatus::PEMBAYARAN;
+            // Route status based on price delta:
+            // - payment_required: set PROSES so user must pay the difference
+            // - no_payment_required / refund_due: set BERHASIL directly (skip payment step)
+            if ($paymentStatus === 'payment_required') {
+                $booking->status = BookingStatus::PROSES;
             } else {
                 $booking->status = BookingStatus::BERHASIL;
             }
             $booking->save();
         });
 
-        // Redirect back to order details page so user sees updated status and payment if needed
+        // Redirect back to order details page
         return redirect()->route('reservasi.detail-pesanan', ['token' => $booking->token_code]);
     }
 
@@ -1535,5 +1663,257 @@ class BookingController extends Controller
 
         return redirect()->route('cancellation')
             ->with('success', 'Booking berhasil dibatalkan. Terima kasih telah menghubungi kami.');
+    }
+
+    /**
+     * Estimate reschedule pricing breakdown (API endpoint).
+     * Calculates the new price for selected dates/unit without saving to DB.
+     * Returns breakdown: original_price, seasonal_charge, reschedule_fee, extra_items, total.
+     */
+    public function estimateReschedulePrice(Request $request, string $token): \Illuminate\Http\JsonResponse
+    {
+        $request->validate([
+            'checkin' => ['required', 'date'],
+            'checkout' => ['required', 'date', 'after:checkin'],
+            'unit_id' => ['required', 'integer', 'exists:area_units,id'],
+            'guest_count' => ['nullable', 'integer', 'min:1'],
+            'extra_items' => ['nullable', 'array'],
+            'extra_items.*' => ['integer', 'min:0'],
+        ]);
+
+        try {
+            // Get the original booking
+            $booking = Booking::with(['bookingDetails.unit.area'])
+                ->where('token_code', strtoupper(trim($token)))
+                ->first();
+
+            if (!$booking) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Booking tidak ditemukan.',
+                ], Response::HTTP_NOT_FOUND);
+            }
+
+            if ($booking->booking_type !== 'glamping') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Booking bukan tipe glamping.',
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+
+            $originalDetail = $booking->bookingDetails->first();
+            if (!$originalDetail) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Rincian booking tidak ditemukan.',
+                ], Response::HTTP_NOT_FOUND);
+            }
+
+            // Parse new dates
+            $newCheckin = Carbon::parse($request->input('checkin'))->startOfDay();
+            $newCheckout = Carbon::parse($request->input('checkout'))->startOfDay();
+            $newUnitId = (int) $request->input('unit_id');
+
+            // Get the new unit
+            $newUnit = AreaUnit::query()
+                ->with(['area:id,slug,extra_charge_breakfast,extra_charge_full'])
+                ->findOrFail($newUnitId);
+
+            // Validate availability
+            if (!$this->availabilityService->isUnitAvailable(
+                $newUnit->id,
+                $newCheckin->toDateString(),
+                $newCheckout->toDateString()
+            )) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unit tidak tersedia untuk tanggal yang dipilih.',
+                ], Response::HTTP_CONFLICT);
+            }
+
+            // Original pricing
+            $originalPrice = (float) $originalDetail->total_price;
+
+            // Calculate new base price
+            $newPricing = $this->pricingService->getUnitBasePriceForRange(
+                $newUnit->id,
+                $newCheckin,
+                $newCheckout
+            );
+            $newBasePrice = (float) ($newPricing['total'] ?? 0.0);
+
+            // Reconstruct amenities from original note
+            $note = $originalDetail && $originalDetail->note
+                ? json_decode($originalDetail->note, true)
+                : [];
+            $amenitiesBreakdown = $note['amenities_breakdown'] ?? [];
+
+            $amenityIds = array_values(array_filter(
+                array_map(fn($i) => (int) ($i['id'] ?? 0), $amenitiesBreakdown)
+            ));
+
+            $amenities = !empty($amenityIds)
+                ? Item::with('prices')->whereIn('id', $amenityIds)->get()
+                : collect();
+
+            $newAmenityBreakdown = [];
+            $extraChargeAmenities = 0.0;
+
+            foreach ($amenitiesBreakdown as $itemRow) {
+                $itemId = (int) ($itemRow['id'] ?? 0);
+                $qty = max(0, (int) ($itemRow['qty'] ?? 0));
+                if ($qty <= 0) continue;
+
+                $itemModel = $amenities->firstWhere('id', $itemId);
+                $latest = $itemModel?->prices->sortByDesc('created_at')->first();
+                $unitPrice = $latest
+                    ? (float) $latest->price
+                    : (float) ($itemRow['unit_price'] ?? 0.0);
+                $lineTotal = $unitPrice * $qty;
+                $extraChargeAmenities += $lineTotal;
+
+                $newAmenityBreakdown[] = [
+                    'id' => $itemId,
+                    'name' => $itemRow['name'] ?? ($itemModel?->name ?? 'Item'),
+                    'qty' => $qty,
+                    'unit_price' => $unitPrice,
+                    'line_total' => $lineTotal,
+                ];
+            }
+
+            // Handle guest count: use new value from request or keep original
+            $guestCount = (int) ($request->input('guest_count') ?? $originalDetail->number_of_people);
+
+            // Validate new guest count against unit capacity
+            if ($guestCount > (int) $newUnit->max_people) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Jumlah tamu melebihi kapasitas unit (' . $newUnit->max_people . ' orang).',
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+
+            $defaultPeople = (int) ($newUnit->default_people ?? 0);
+            $extraPeople = max(0, $guestCount - $defaultPeople);
+
+            $fullRate = $newUnit->area && $newUnit->area->extra_charge_full !== null
+                ? (float) $newUnit->area->extra_charge_full
+                : 0.0;
+            $breakfastRate = $newUnit->area && $newUnit->area->extra_charge_breakfast !== null
+                ? (float) $newUnit->area->extra_charge_breakfast
+                : 0.0;
+
+            $extraChargeMode = (string) ($note['extra_charge_mode'] ?? ($note['extra_breakfast']['mode'] ?? 'breakfast'));
+            $selectedExtraRate = 0.0;
+
+            if ($extraPeople > 0) {
+                $selectedExtraRate = $extraChargeMode === 'full' ? $fullRate : $breakfastRate;
+            }
+
+            $extraChargeGuestMode = $extraPeople * $selectedExtraRate;
+
+            // Handle extra items: use new items from request or keep original
+            $requestExtraItems = $request->input('extra_items', []);
+            $finalAmenityBreakdown = $newAmenityBreakdown;
+            $finalExtraChargeAmenities = $extraChargeAmenities;
+
+            if (!empty($requestExtraItems)) {
+                // Recalculate with new quantities from request
+                $finalExtraChargeAmenities = 0.0;
+                $updatedAmenities = [];
+
+                foreach ($finalAmenityBreakdown as $item) {
+                    $itemId = $item['id'];
+                    $newQty = isset($requestExtraItems[$itemId]) ? max(0, (int) $requestExtraItems[$itemId]) : $item['qty'];
+                    $unitPrice = $item['unit_price'];
+                    $lineTotal = $unitPrice * $newQty;
+                    $finalExtraChargeAmenities += $lineTotal;
+
+                    $updatedAmenities[] = array_merge($item, ['qty' => $newQty, 'line_total' => $lineTotal]);
+                }
+                $finalAmenityBreakdown = $updatedAmenities;
+            }
+
+            $totalNewExtraCharge = $finalExtraChargeAmenities + $extraChargeGuestMode;
+            $newTotalPrice = $newBasePrice + $totalNewExtraCharge;
+
+            // Calculate original breakdown
+            $originalBasePrice = (float) $originalDetail->total_price - (float) $originalDetail->total_extra_charge;
+            $originalExtraCharge = (float) $originalDetail->total_extra_charge;
+
+            // DELTA PAYMENT MODEL
+            // Guest only pays/refunds the DIFFERENCE, not the full new price
+            $priceDelta = $newTotalPrice - $originalPrice;
+
+            // Calculate breakdown of what changed
+            $basePrice_Delta = $newBasePrice - $originalBasePrice;
+            $extraCharge_Delta = $totalNewExtraCharge - $originalExtraCharge;
+
+            // Determine payment status
+            $paymentStatus = match(true) {
+                $priceDelta > 0 => 'payment_required',
+                $priceDelta < 0 => 'refund_due',
+                default => 'no_payment_required',
+            };
+
+            return response()->json([
+                'success' => true,
+                'breakdown' => [
+                    'original_price' => $originalPrice,
+                    'new_total_price' => $newTotalPrice,
+                    'price_delta' => $priceDelta,
+                    'payable_amount' => abs($priceDelta),
+                    'payment_status' => $paymentStatus,
+                    'is_price_increase' => $priceDelta > 0,
+                    'is_price_decrease' => $priceDelta < 0,
+                ],
+                'breakdown_detail' => [
+                    'original' => [
+                        'base_price' => $originalBasePrice,
+                        'extra_charge' => $originalExtraCharge,
+                        'total' => $originalPrice,
+                    ],
+                    'new' => [
+                        'base_price' => $newBasePrice,
+                        'extra_charge' => $totalNewExtraCharge,
+                        'total' => $newTotalPrice,
+                    ],
+                    'delta' => [
+                        'base_price_change' => $basePrice_Delta,
+                        'extra_charge_change' => $extraCharge_Delta,
+                        'total_change' => $priceDelta,
+                    ],
+                ],
+                'details' => [
+                    'original_dates' => [
+                        'checkin' => $originalDetail->check_in->toDateString(),
+                        'checkout' => $originalDetail->check_out->toDateString(),
+                        'nights' => $originalDetail->check_out->diffInDays($originalDetail->check_in),
+                    ],
+                    'new_dates' => [
+                        'checkin' => $newCheckin->toDateString(),
+                        'checkout' => $newCheckout->toDateString(),
+                        'nights' => $newCheckout->diffInDays($newCheckin),
+                    ],
+                    'guest' => [
+                        'original_count' => (int) $originalDetail->number_of_people,
+                        'new_count' => $guestCount,
+                        'extra_people' => $extraPeople,
+                        'extra_charge_mode' => $extraChargeMode,
+                        'extra_charge_amount' => $extraChargeGuestMode,
+                    ],
+                    'amenities' => $finalAmenityBreakdown,
+                    'extra_charges_breakdown' => [
+                        'amenities' => $finalExtraChargeAmenities,
+                        'guest_extra' => $extraChargeGuestMode,
+                        'total' => $totalNewExtraCharge,
+                    ],
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat mengestimasi harga: ' . $e->getMessage(),
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 }

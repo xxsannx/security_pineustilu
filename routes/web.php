@@ -44,6 +44,8 @@ Route::get('/reschedule', [BookingController::class, 'showReschedulePage'])->nam
 // New reschedule flow: page where guest chooses new dates/units (separate from main glamping reservation)
 Route::get('/reschedule/{token}/pilih', [BookingController::class, 'showRescheduleForm'])->name('reschedule.form');
 Route::post('/reschedule/{token}/submit', [BookingController::class, 'processReschedule'])->name('reschedule.submit');
+// API endpoint for reschedule price estimation
+Route::post('/api/reschedule/{token}/estimate', [BookingController::class, 'estimateReschedulePrice']);
 Route::get('/cancellation', [BookingController::class, 'showCancellationPage'])->name('cancellation');
 Route::post('/cancellation/process', [BookingController::class, 'processCancellation'])->name('cancellation.process');
 // Guest-facing cancellation confirmation & refund flow

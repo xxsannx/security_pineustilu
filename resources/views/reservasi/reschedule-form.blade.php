@@ -34,7 +34,7 @@
         </form>
 
         @include('partials.modals.modal-info')
-        @include('partials.modals.modal-amenities')
+        @include('partials.modals.modal-amenities', ['formId' => 'rescheduleForm'])
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/flatpickr.min.css') }}">

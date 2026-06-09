@@ -1,5 +1,5 @@
 {{-- My Bookings Content --}}
-<div class="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-4 sm:p-6 md:p-8" data-aos="fade-up" data-aos-delay="100">
+<div class="relative z-20 bg-white rounded-2xl sm:rounded-3xl shadow-xl p-4 sm:p-6 md:p-8" data-aos="fade-up" data-aos-delay="100">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
         <div>
             <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 font-poppins">Booking</h2>
@@ -18,18 +18,45 @@
                    class="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2.5 sm:py-3 border-2 border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-[#017249] focus:border-transparent font-poppins text-xs sm:text-sm">
         </div>
 
-        <button class="px-4 sm:px-6 py-2.5 sm:py-3 border-2 border-gray-200 rounded-lg sm:rounded-xl hover:border-[#017249] hover:bg-[#f0fdf4] transition-all duration-300 cursor-pointer">
-            <svg class="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
-            </svg>
-        </button>
+        <div class="relative inline-block">
+            <button id="bookingFilterBtn" class="px-4 sm:px-6 py-2.5 sm:py-3 border-2 border-gray-200 rounded-lg sm:rounded-xl hover:border-[#017249] hover:bg-[#f0fdf4] transition-all duration-300 cursor-pointer" title="Filter">
+                <svg class="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                </svg>
+            </button>
+            <div id="bookingFilterDropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden">
+                <div class="py-1">
+                    <button type="button" class="booking-filter-opt block w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-[#017249] font-medium transition-colors" data-value="all">All Status</button>
+                    <button type="button" class="booking-filter-opt block w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-[#017249] font-medium transition-colors" data-value="selesai">Selesai</button>
+                    <button type="button" class="booking-filter-opt block w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-[#017249] font-medium transition-colors" data-value="berhasil">Berhasil</button>
+                    <button type="button" class="booking-filter-opt block w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-[#017249] font-medium transition-colors" data-value="proses">Proses / Menunggu</button>
+                    <button type="button" class="booking-filter-opt block w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-[#017249] font-medium transition-colors" data-value="pembayaran">Pembayaran</button>
+                    <button type="button" class="booking-filter-opt block w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-[#017249] font-medium transition-colors" data-value="dibatalkan">Dibatalkan</button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
 {{-- Booking Cards --}}
 <div id="bookingsContainer" class="space-y-4 sm:space-y-6">
     @forelse($bookings as $index => $booking)
+        @php
+            $statusValue = is_object($booking->status) ? $booking->status->value : $booking->status;
+            $statusLabel = is_object($booking->status) ? $booking->status->label() : ucfirst($statusValue);
+            $statusColor = match($statusValue) {
+                'proses' => 'bg-gray-500 text-white',
+                'pembayaran' => 'bg-yellow-500 text-white',
+                'berhasil' => 'bg-[#017249] text-white',
+                'berjalan' => 'bg-blue-500 text-white',
+                'selesai' => 'bg-emerald-600 text-white',
+                'dibatalkan' => 'bg-red-500 text-white',
+                default => 'bg-gray-400 text-white',
+            };
+        @endphp
         <div class="booking-card bg-white rounded-xl sm:rounded-2xl border border-gray-200 p-4 sm:p-6 hover:shadow-lg transition-all duration-300"
+             data-id="{{ $booking->id }}"
+             data-status="{{ strtolower($statusLabel) }}" data-status-val="{{ strtolower($statusValue) }}"
              data-aos="fade-up" data-aos-delay="{{ 100 + ($index * 50) }}">
 
             {{-- Header --}}
@@ -57,19 +84,6 @@
                 </div>
 
                 {{-- Status Badge --}}
-                @php
-                    $statusValue = is_object($booking->status) ? $booking->status->value : $booking->status;
-                    $statusLabel = is_object($booking->status) ? $booking->status->label() : ucfirst($statusValue);
-                    $statusColor = match($statusValue) {
-                        'proses' => 'bg-gray-500 text-white',
-                        'pembayaran' => 'bg-yellow-500 text-white',
-                        'berhasil' => 'bg-[#017249] text-white',
-                        'berjalan' => 'bg-blue-500 text-white',
-                        'selesai' => 'bg-emerald-600 text-white',
-                        'dibatalkan' => 'bg-red-500 text-white',
-                        default => 'bg-gray-400 text-white',
-                    };
-                @endphp
                 <span class="px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold font-poppins {{ $statusColor }}">
                     {{ $statusLabel }}
                 </span>
@@ -162,9 +176,9 @@
 </div>
 
 {{-- Load More --}}
-@if($bookings->count() > 0)
+@if($bookings->count() > 5)
     <div class="text-center mt-6 sm:mt-8" data-aos="fade-up">
-        <button class="px-6 sm:px-8 py-2.5 sm:py-3 bg-[#017249] text-white rounded-xl sm:rounded-2xl hover:bg-[#015a3a] font-semibold transition-all duration-300 font-poppins text-xs sm:text-sm">
+        <button id="loadMoreBooking" class="px-6 sm:px-8 py-2.5 sm:py-3 border-2 border-[#017249] text-[#017249] rounded-xl sm:rounded-2xl hover:bg-[#017249] hover:text-white font-semibold transition-all duration-300 font-poppins text-xs sm:text-sm">
             Load More
         </button>
     </div>

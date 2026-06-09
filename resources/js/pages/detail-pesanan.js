@@ -110,9 +110,20 @@ class DetailPesanan {
     }
 
     /**
-     * Proceed to payment step (update status to pembayaran)
+     * Proceed to payment step or directly confirm if no additional payment required.
+     * For reschedule bookings where price delta <= 0, skip payment and go straight to confirmed.
      */
     proceedToPayment() {
+        const btn = qs('#continueOrderBtn') ?? qs('[data-action="proceed-to-payment"]');
+        const reschedulePaymentStatus = btn?.dataset?.reschedulePaymentStatus ?? '';
+
+        // If this is a reschedule with no extra payment required, skip payment and confirm directly
+        if (reschedulePaymentStatus === 'no_payment_required' || reschedulePaymentStatus === 'refund_due') {
+            this.updateBookingStatus('berhasil');
+            return;
+        }
+
+        // Otherwise proceed to payment stage as normal
         this.updateBookingStatus('pembayaran');
     }
 

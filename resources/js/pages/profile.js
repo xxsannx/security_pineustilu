@@ -5,6 +5,7 @@
 
 import { Modal } from '../components/Modal.js';
 import { onReady } from '../utils/dom.js';
+import { ProfileHistoryManager } from './ProfileHistoryManager.js';
 
 class Profile {
     constructor() {
@@ -27,6 +28,45 @@ class Profile {
 
         this.initMobileMenu();
         this.setupEventListeners();
+        this.initHistoryManagers();
+    }
+
+    initHistoryManagers() {
+        // Bookings Manager
+        new ProfileHistoryManager({
+            containerId: 'bookingsContainer',
+            cardClass: 'booking-card',
+            searchInputId: 'bookingSearch',
+            filterBtnId: 'bookingFilterBtn',
+            filterDropdownId: 'bookingFilterDropdown',
+            filterOptClass: 'booking-filter-opt',
+            loadMoreBtnId: 'loadMoreBooking',
+            pageSize: 5
+        });
+
+        // Reschedule Manager
+        new ProfileHistoryManager({
+            containerId: 'reschedulesContainer',
+            cardClass: 'reschedule-card',
+            searchInputId: 'rescheduleSearch',
+            filterBtnId: 'rescheduleFilterBtn',
+            filterDropdownId: 'rescheduleFilterDropdown',
+            filterOptClass: 'reschedule-filter-opt',
+            loadMoreBtnId: 'loadMoreReschedule',
+            pageSize: 5
+        });
+
+        // Cancellation Manager
+        new ProfileHistoryManager({
+            containerId: 'cancellationsContainer',
+            cardClass: 'cancellation-card',
+            searchInputId: 'cancellationSearch',
+            filterBtnId: 'cancellationFilterBtn',
+            filterDropdownId: 'cancellationFilterDropdown',
+            filterOptClass: 'cancellation-filter-opt',
+            loadMoreBtnId: 'loadMoreCancellation',
+            pageSize: 5
+        });
     }
 
     /**
