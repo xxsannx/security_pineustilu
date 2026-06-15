@@ -115,7 +115,8 @@
                                     <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                                     </svg>
-                                    <strong>Perhatian:</strong> Pembatalan booking tidak dapat dibatalkan. Pastikan Anda yakin ingin membatalkan reservasi ini.
+                                    <strong>Perhatian:</strong>Sebelum melanjutkan, pastikan untuk membaca <a href="{{ route('pedoman') }}#kebijakan-heading" class="inline text-red-900 font-bold px-1" target="_blank">kebijakan</a> pembatalan kami dan memahami biaya pembatalan yang mungkin berlaku.
+
                                 </p>
                             </div>
 

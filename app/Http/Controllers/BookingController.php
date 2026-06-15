@@ -114,10 +114,10 @@ class BookingController extends Controller
         ]);
 
         $checkin = Carbon::parse((string) $validated['checkin'])->startOfDay()->toDateString();
-        $checkout = isset($validated['checkout']) 
-            ? Carbon::parse((string) $validated['checkout'])->startOfDay()->toDateString() 
+        $checkout = isset($validated['checkout'])
+            ? Carbon::parse((string) $validated['checkout'])->startOfDay()->toDateString()
             : Carbon::parse($checkin)->addDay()->toDateString();
-            
+
         $excludeDetailId = null;
         if (!empty($validated['original_token'])) {
             $origBooking = \App\Models\Booking::where('token_code', $validated['original_token'])->with('bookingDetails')->first();
@@ -125,7 +125,7 @@ class BookingController extends Controller
                 $excludeDetailId = $origBooking->bookingDetails->first()->id;
             }
         }
-            
+
         $areaUnits = $this->availabilityService->buildAreaUnits();
         $unitStatuses = $this->availabilityService->computeAvailabilityForDateRange($areaUnits, $checkin, $checkout, $excludeDetailId);
 
@@ -1579,12 +1579,12 @@ class BookingController extends Controller
             $checkinDate = null;
             $totalPrice = 0.0;
 
-            if ($booking->type === 'glamping') {
-                $detail = $booking->details()->first();
+            if ($booking->booking_type === 'glamping') {
+                $detail = $booking->bookingDetails()->first();
                 $checkinDate = $detail->check_in ? Carbon::parse($detail->check_in) : null;
                 $totalPrice = (float) ($detail->total_price ?? 0.0);
-            } else if ($booking->type === 'outbound') {
-                $out = $booking->outboundDetails()->first();
+            } else if ($booking->booking_type === 'outbound') {
+                $out = $booking->bookingOutbounds()->first();
                 $checkinDate = $out->schedule_date ? Carbon::parse($out->schedule_date) : null;
                 $totalPrice = (float) ($out->total_price ?? 0.0);
             }
@@ -1649,8 +1649,8 @@ class BookingController extends Controller
         return view('cancellation_confirm', [
             'booking' => $booking,
             'code' => strtoupper(trim($code)),
-            'cancellation_fee' => $cancellationFee,
-            'refund_amount' => $refundAmount,
+            'cancellation_fee' => round($cancellationFee, 0),
+            'refund_amount' => round($refundAmount, 0),
             'is_paid' => $isPaid,
         ]);
     }
@@ -1701,7 +1701,7 @@ class BookingController extends Controller
             // TODO: enqueue refund job / integrate payment gateway if required
         });
 
-        return redirect()->route('cancellation.success')->with('success', 'Pembatalan dan pengembalian dana berhasil diproses.');
+        return redirect()->route('cancellation.success', ['code' => $booking->token_code])->with('success', 'Pembatalan dan pengembalian dana berhasil diproses.');
     }
 
     /**
@@ -1709,7 +1709,31 @@ class BookingController extends Controller
      */
     public function showCancellationSuccessPage(Request $request): \Illuminate\Contracts\View\View
     {
-        return view('cancellation_success');
+        $code = $request->input('code');
+        $isPaid = false;
+        $refundAmount = 0;
+        $cancellationFee = 0;
+
+        if ($code) {
+            $booking = Booking::with([
+                'bookingDetails.unit.area',
+                'bookingOutbounds.outbound',
+            ])->where('token_code', strtoupper(trim($code)))->first();
+
+            if ($booking) {
+                $calc = $this->calculateCancellationFeeAndRefund($booking);
+                $cancellationFee = $calc['fee'];
+                $refundAmount = $calc['refund'];
+                $isPaid = $calc['is_paid'];
+            }
+        }
+
+        return view('cancellation_success', [
+            'code' => $code,
+            'refund_amount' => round($refundAmount, 0),
+            'cancellation_fee' => round($cancellationFee, 0),
+            'is_paid' => $isPaid,
+        ]);
     }
 
     /**
