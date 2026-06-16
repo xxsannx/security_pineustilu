@@ -800,9 +800,9 @@ class BookingController extends Controller
         }
     }
 
-    private function assertUnitAvailable(int $unitId, Carbon $checkin, Carbon $checkout): void
+    private function assertUnitAvailable(int $unitId, Carbon $checkin, Carbon $checkout, ?int $excludeBookingDetailId = null): void
     {
-        if (!$this->availabilityService->isUnitAvailable($unitId, $checkin->toDateString(), $checkout->toDateString())) {
+        if (!$this->availabilityService->isUnitAvailable($unitId, $checkin->toDateString(), $checkout->toDateString(), $excludeBookingDetailId)) {
             throw ValidationException::withMessages([
                 'unit_id' => 'Unit not available for selected dates',
             ]);
@@ -1337,7 +1337,7 @@ class BookingController extends Controller
         $checkout = Carbon::parse($request->input('checkout'))->startOfDay();
 
         // Ensure availability
-        $this->assertUnitAvailable($unit->id, $checkin, $checkout);
+        $this->assertUnitAvailable($unit->id, $checkin, $checkout, $detail->id);
 
         // Recompute base price using PricingService
         $pricing = $this->pricingService->getUnitBasePriceForRange($unit->id, $checkin, $checkout);
@@ -1844,7 +1844,8 @@ class BookingController extends Controller
                 !$this->availabilityService->isUnitAvailable(
                     $newUnit->id,
                     $newCheckin->toDateString(),
-                    $newCheckout->toDateString()
+                    $newCheckout->toDateString(),
+                    $originalDetail->id
                 )
             ) {
                 return response()->json([

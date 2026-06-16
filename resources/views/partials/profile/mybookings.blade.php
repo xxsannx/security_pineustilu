@@ -14,7 +14,7 @@
             </svg>
             <input type="text"
                    id="bookingSearch"
-                   placeholder="search"
+                   placeholder="Cari berdasarkan kode booking"
                    class="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2.5 sm:py-3 border-2 border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-[#017249] focus:border-transparent font-poppins text-xs sm:text-sm">
         </div>
 
@@ -139,7 +139,7 @@
                         'amenities' => $booking->amenities ?? [],
                         'total' => $booking->total ?? 0,
                         'extra_charge' => $booking->extra_charge ?? 0,
-                        'booking_code' => $booking->token_code ?? ''
+                        'booking_code' => $booking->id ?? ''
                     ];
                     $statusVal = is_object($booking->status) ? $booking->status->value : $booking->status;
                 @endphp

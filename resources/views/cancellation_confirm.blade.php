@@ -68,6 +68,9 @@
                                         <div>Cancellation Fee</div>
                                         <div>Rp {{ number_format($cancellation_fee ?? 0, 0, ',', '.') }}</div>
                                     </div>
+                                    <p class="text-[10px] text-red-500 mt-1 italic leading-tight">
+                                        *Terdapat biaya pembatalan sesuai ketentuan. Silakan lihat <a href="{{ route('pedoman') }}#kebijakan-heading" target="_blank" class="font-semibold underline hover:text-red-700 transition-colors">ketentuan</a> untuk info lebih lanjut.
+                                    </p>
                                 </div>
 
                                 <div class="mt-4 border-t pt-4">

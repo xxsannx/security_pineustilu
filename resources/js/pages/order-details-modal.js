@@ -159,15 +159,22 @@ class OrderDetailsModal {
      */
     updateActionButtons(data) {
         if (data.booking_code) {
-            const rescheduleLink = document.querySelector('a[href*="reschedule"]');
-            const cancellationLink = document.querySelector('a[href*="cancellation"]');
+            const rescheduleLink = this.modal.querySelector('a[href*="reschedule"]');
+            const cancellationLink = this.modal.querySelector('a[href*="cancellation"]');
+
+            const params = new URLSearchParams();
+            params.append('code', data.booking_code);
+            if (data.guest_email) {
+                params.append('email', data.guest_email);
+            }
+            const queryString = params.toString();
 
             if (rescheduleLink) {
-                rescheduleLink.href = `/reschedule?code=${encodeURIComponent(data.booking_code)}`;
+                rescheduleLink.href = `/reschedule?${queryString}`;
             }
 
             if (cancellationLink) {
-                cancellationLink.href = `/cancellation?code=${encodeURIComponent(data.booking_code)}`;
+                cancellationLink.href = `/cancellation?${queryString}`;
             }
         }
     }

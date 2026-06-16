@@ -15,7 +15,7 @@
             </svg>
             <input type="text"
                    id="cancellationSearch"
-                   placeholder="Cari berdasarkan kode booking atau area..."
+                   placeholder="Cari berdasarkan kode booking"
                    class="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2.5 sm:py-3 border-2 border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-[#017249] focus:border-transparent font-poppins text-xs sm:text-sm">
         </div>
 
@@ -43,7 +43,7 @@
         @php
             $cancelStatusVal = strtolower($cancellation->status ?? 'cancelled');
             $cancelStatusColor = match($cancelStatusVal) {
-                'approved' => 'bg-green-500 text-white',
+                'approved' => 'bg-[#017249] text-white',
                 'pending' => 'bg-yellow-500 text-white',
                 'rejected' => 'bg-orange-500 text-white',
                 'cancelled' => 'bg-red-500 text-white',
@@ -57,21 +57,21 @@
                 default => ucfirst($cancellation->status ?? 'Cancelled'),
             };
         @endphp
-        <div class="cancellation-card bg-white rounded-xl sm:rounded-2xl border-2 border-red-100 overflow-hidden hover:shadow-lg transition-all duration-300"
+        <div class="cancellation-card bg-white rounded-xl sm:rounded-2xl border-2 border-gray-150 overflow-hidden hover:shadow-lg transition-all duration-300"
              data-id="{{ $cancellation->id }}"
              data-status="{{ $cancelStatusVal }}"
              data-aos="fade-up" data-aos-delay="{{ 100 + ($index * 50) }}">
 
             {{-- Card Header Bar --}}
-            <div class="flex items-center justify-between px-4 sm:px-6 py-3 bg-red-50 border-b border-red-100">
+            <div class="flex items-center justify-between px-4 sm:px-6 py-3 bg-white-50 border-b border-red-100">
                 <div class="flex items-center gap-2 sm:gap-3">
                     <div class="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
-                        <svg class="w-4 h-4 sm:w-5 sm:h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-4 h-4 sm:w-5 sm:h-5 text-[#017249]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
                     </div>
                     <div>
-                        <p class="text-[10px] sm:text-xs text-red-400 font-poppins">Kode Booking</p>
+                        <p class="text-[10px] sm:text-xs text-[#017249] font-poppins">Kode Booking</p>
                         <p class="text-xs sm:text-sm font-bold text-gray-800 font-poppins tracking-wide">{{ $cancellation->id ?? ('CN-' . $index) }}</p>
                     </div>
                 </div>
@@ -151,23 +151,23 @@
                         </div>
 
                         {{-- Right: Refund Info --}}
-                        <div class="bg-green-50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-green-100">
+                        <div class="bg-white-50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-gray-300">
                             <div class="flex items-center gap-2 mb-2 sm:mb-3">
                                 <svg class="w-4 h-4 sm:w-5 sm:h-5 text-[#017249]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
                                 </svg>
-                                <p class="text-xs sm:text-sm text-gray-600 font-poppins font-medium">Total Refund</p>
+                                <p class="text-xs sm:text-sm text-[#017249] font-poppins font-medium">Total Refund</p>
                             </div>
-                            <p class="text-xl sm:text-2xl font-bold text-[#017249] font-poppins">
+                            <p class="text-xl sm:text-2xl font-bold text-black-700 font-poppins">
                                 Rp {{ number_format($cancellation->refund ?? 0, 0, ',', '.') }}
                             </p>
                             @if(isset($cancellation->refund_status))
                                 @php
                                     $refundStatusColor = match($cancellation->refund_status ?? 'pending') {
-                                        'completed' => 'text-green-600',
-                                        'processed' => 'text-blue-600',
-                                        'pending' => 'text-yellow-600',
-                                        default => 'text-gray-500',
+                                        'completed' => 'text-gray-700',
+                                        'processed' => 'text-gray-700',
+                                        'pending' => 'text-gray-700',
+                                        default => 'text-gray-700',
                                     };
                                     $refundStatusLabel = match($cancellation->refund_status ?? 'pending') {
                                         'completed' => 'Refund Selesai',
@@ -189,17 +189,17 @@
                     @if($hasFee || $hasReason)
                         <div class="grid grid-cols-1 {{ $hasFee && $hasReason ? 'sm:grid-cols-2' : '' }} gap-3 sm:gap-4 mb-4 sm:mb-5 pt-3 sm:pt-4 border-t border-gray-100">
                             @if($hasFee)
-                                <div class="bg-red-50 rounded-lg p-3 sm:p-4 border border-red-100">
-                                    <p class="text-[10px] sm:text-xs text-red-500 font-poppins mb-0.5">Biaya Cancellation</p>
-                                    <p class="text-sm sm:text-base font-bold text-red-600 font-poppins">
+                                <div class="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-300">
+                                    <p class="text-[10px] sm:text-xs text-[#017249] font-poppins mb-0.5">Biaya Cancellation</p>
+                                    <p class="text-sm sm:text-base font-bold text-black-700 font-poppins">
                                         Rp {{ number_format($cancellation->cancellation_fee, 0, ',', '.') }}
                                     </p>
                                 </div>
                             @endif
                             @if($hasReason)
-                                <div class="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-100">
-                                    <p class="text-[10px] sm:text-xs text-gray-400 font-poppins mb-0.5">Alasan Pembatalan</p>
-                                    <p class="text-xs sm:text-sm text-gray-700 font-poppins">{{ $cancellation->reason }}</p>
+                                <div class="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-300">
+                                    <p class="text-[10px] sm:text-xs text-[#017249] font-poppins mb-0.5">Alasan Pembatalan</p>
+                                    <p class="text-xs sm:text-sm text-black-700 font-poppins">{{ $cancellation->reason }}</p>
                                 </div>
                             @endif
                         </div>
