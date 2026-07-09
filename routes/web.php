@@ -94,9 +94,7 @@ Route::prefix('api')->middleware(['throttle:60,1'])->group(function () {
     Route::get('/payment/status/{bookingToken}', [PaymentController::class, 'getPaymentStatus'])->name('api.payment.status');
 });
 
-// Midtrans webhook notification (no rate limiting for webhooks)
-Route::post('/api/payment/notification', [PaymentController::class, 'handleNotification'])
-    ->name('api.payment.notification');
+
 
 Route::get('/barang-tambahan', [ItemController::class, 'index'])->name('barang-tambahan');
 

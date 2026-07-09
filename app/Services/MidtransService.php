@@ -7,6 +7,7 @@ use App\Models\Payment;
 use Exception;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class MidtransService
 {
@@ -291,9 +292,9 @@ class MidtransService
     }
 
     /**
-     * Handle payment notification from Midtrans
+     * Handle verified payment notification from Midtrans
      */
-    public function handleNotification(array $notificationData): void
+    public function handleVerifiedNotification(array $notificationData): void
     {
         try {
             $orderId = $notificationData['order_id'] ?? null;
@@ -308,34 +309,49 @@ class MidtransService
             // Log payment webhook received
             AuditLogService::logPaymentWebhookReceived($orderId, $transactionStatus ?? 'unknown');
 
-            $payment = Payment::where('order_id', $orderId)->first();
-            if (!$payment) {
-                Log::warning('Payment not found for order_id: ' . $orderId);
-                return;
-            }
+            DB::transaction(function () use ($orderId, $transactionStatus, $transactionId, $notificationData) {
+                $payment = Payment::where('order_id', $orderId)->lockForUpdate()->first();
+                if (!$payment) {
+                    Log::warning('Payment not found for order_id: ' . $orderId);
+                    return;
+                }
 
-            // Update payment status
-            $this->updatePaymentStatus($payment, $transactionStatus, $transactionId, $notificationData);
+                $booking = Booking::where('id', $payment->booking_id)->lockForUpdate()->first();
+                if (!$booking) {
+                    Log::warning('Booking not found for payment: ' . $payment->id);
+                    return;
+                }
 
-            // Update booking status based on payment status
-            if (in_array($transactionStatus, ['settlement', 'capture'])) {
-                $payment->booking->update(['status' => 'berhasil']);
-                // Log payment success
-                AuditLogService::logPaymentSuccess($orderId, (float) $payment->gross_amount, $payment->booking?->user_id);
-            } elseif ($transactionStatus === 'deny') {
-                $payment->booking->update(['status' => 'booking']);
-            }
+                // Cek idempotensi
+                if ($booking->status->value === 'berhasil' && in_array($transactionStatus, ['settlement', 'capture'])) {
+                    Log::info('Replay ignored: Booking already marked as berhasil', ['order_id' => $orderId]);
+                    return;
+                }
+                if ($booking->status->value === 'dibatalkan' && in_array($transactionStatus, ['deny', 'expire', 'cancel'])) {
+                    Log::info('Replay ignored: Booking already marked as dibatalkan', ['order_id' => $orderId]);
+                    return;
+                }
 
-            // Log payment failed or expired/cancelled
-            if (in_array($transactionStatus, ['deny', 'expire', 'cancel'])) {
-                AuditLogService::logPaymentFailed($orderId, $transactionStatus, $payment->booking?->user_id);
-            }
+                // Update payment status
+                $this->updatePaymentStatus($payment, $transactionStatus, $transactionId, $notificationData);
 
-            Log::info('Payment notification processed', [
-                'order_id' => $orderId,
-                'transaction_status' => $transactionStatus,
-                'booking_id' => $payment->booking_id,
-            ]);
+                // Update booking status berdasarkan status pembayaran
+                if (in_array($transactionStatus, ['settlement', 'capture'])) {
+                    $booking->update(['status' => 'berhasil']);
+                    // Log payment success
+                    AuditLogService::logPaymentSuccess($orderId, (float) $payment->gross_amount, $booking->user_id);
+                } elseif (in_array($transactionStatus, ['deny', 'expire', 'cancel'])) {
+                    $booking->update(['status' => 'dibatalkan']);
+                    // Log payment failed
+                    AuditLogService::logPaymentFailed($orderId, $transactionStatus, $booking->user_id);
+                }
+
+                Log::info('Payment notification processed and updated in transaction', [
+                    'order_id' => $orderId,
+                    'transaction_status' => $transactionStatus,
+                    'booking_id' => $booking->id,
+                ]);
+            });
 
         } catch (Exception $e) {
             Log::error('Error handling Midtrans notification: ' . $e->getMessage(), [

@@ -8,6 +8,8 @@ use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 class PaymentController extends Controller
 {
@@ -90,16 +92,103 @@ class PaymentController extends Controller
     public function handleNotification(Request $request): JsonResponse
     {
         try {
-            $notification = $request->all();
+            // 1. Validasi struktur payload
+            $validator = Validator::make($request->all(), [
+                'order_id' => 'required|string',
+                'status_code' => 'required|string',
+                'gross_amount' => 'required',
+                'transaction_status' => 'required|string',
+                'fraud_status' => 'required|string',
+                'transaction_id' => 'required|string',
+                'signature_key' => 'required|string',
+            ]);
 
-            // Verify notification signature (recommended for production)
-            // You can verify the signature using your server key and the notification body
+            if ($validator->fails()) {
+                Log::warning('Midtrans notification invalid payload structure', [
+                    'errors' => $validator->errors()->all(),
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid payload structure',
+                ], 400);
+            }
 
-            $this->midtransService->handleNotification($notification);
+            $orderId = $request->input('order_id');
+            $statusCode = $request->input('status_code');
+            $grossAmount = $request->input('gross_amount');
+            $signatureKey = $request->input('signature_key');
+
+            // 2. Validasi signature (fail-closed, constant-time compare)
+            $serverKey = config('midtrans.server_key');
+            $expectedSignature = hash('sha512', $orderId . $statusCode . $grossAmount . $serverKey);
+
+            if (!hash_equals($expectedSignature, $signatureKey)) {
+                AuditLogService::log(
+                    'payment_fraud_attempt',
+                    "Terdeteksi percobaan pemalsuan webhook pembayaran (signature mismatch) untuk Order ID: {$orderId}",
+                    null,
+                    'CRITICAL'
+                );
+                Log::error('Signature verification failed for order_id: ' . $orderId);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized signature',
+                ], 401);
+            }
+
+            // 3. Verifikasi ulang ke Midtrans Get Status API
+            $statusResponse = $this->midtransService->getPaymentStatus($orderId);
+            if (!$statusResponse) {
+                Log::error('Failed to verify status from Midtrans API for order_id: ' . $orderId);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to verify payment status with Midtrans API',
+                ], 500);
+            }
+
+            // 4. Cocokkan gross_amount hasil Get Status API dengan data lokal
+            $payment = \App\Models\Payment::where('order_id', $orderId)->first();
+            if (!$payment) {
+                Log::warning('Payment record not found for order_id: ' . $orderId);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Payment record not found',
+                ], 404);
+            }
+
+            $apiGrossAmount = $statusResponse['gross_amount'] ?? null;
+            if (!$apiGrossAmount || abs((float)$apiGrossAmount - (float)$payment->gross_amount) > 0.01) {
+                Log::warning('Payment webhook amount mismatch', [
+                    'order_id' => $orderId,
+                    'local_amount' => $payment->gross_amount,
+                    'api_amount' => $apiGrossAmount
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Payment amount mismatch',
+                ], 409);
+            }
+
+            // Cek fraud_status jika transaksi adalah capture
+            $apiStatus = $statusResponse['transaction_status'] ?? '';
+            $apiFraud = $statusResponse['fraud_status'] ?? '';
+            if ($apiStatus === 'capture' && $apiFraud !== 'accept') {
+                Log::warning('Capture payment not accepted by fraud detection', [
+                    'order_id' => $orderId,
+                    'fraud_status' => $apiFraud
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Payment fraud detection failed',
+                ], 400);
+            }
+
+            // 5. Kirim data yang sudah divalidasi ke MidtransService untuk disimpan secara atomic & idempotent
+            $this->midtransService->handleVerifiedNotification($statusResponse);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Notification processed',
+                'message' => 'Notification processed successfully',
             ]);
 
         } catch (\Exception $e) {
