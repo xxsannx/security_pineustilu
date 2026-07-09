@@ -1204,7 +1204,7 @@ class BookingController extends Controller
             return back()->with('error', 'Invalid status transition.');
         }
 
-        // If cancelling, delete the booking instead of updating status
+        // If cancelling, update the status to dibatalkan
         if ($newStatus === 'dibatalkan') {
             $cancelledBy = 'customer';
 
@@ -1221,13 +1221,9 @@ class BookingController extends Controller
                     'refund_status' => 'not_required',
                 ]);
 
-                // Delete related records
-                $booking->bookingDetails()->delete();
-                $booking->payments()->delete();
-                $booking->bookingOutbounds()->delete();
-
-                // Delete the booking
-                $booking->delete();
+                // Update booking status to dibatalkan instead of deleting it (preserves history & avoids Postgres constraints)
+                $booking->status = BookingStatus::DIBATALKAN;
+                $booking->save();
             });
 
             // Log cancellation approval
