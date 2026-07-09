@@ -23,6 +23,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
@@ -1115,6 +1116,30 @@ class BookingController extends Controller
     {
         $booking = Booking::where('token_code', $token)->firstOrFail();
 
+        // 1. Pengecekan Otorisasi Pemilik Booking (Authorization Check)
+        if ($booking->user_id) {
+            // User terdaftar wajib login dan harus pemilik booking yang sah
+            if (!auth()->check() || $booking->user_id !== auth()->id()) {
+                AuditLogService::logUnauthorizedAccess($request->url(), auth()->id());
+                AuditLogService::logIdorAttempt($token, auth()->id());
+                if ($request->expectsJson()) {
+                    return response()->json(['error' => 'Akses ditolak.'], 403);
+                }
+                abort(403, 'Anda tidak memiliki hak akses untuk mengubah pesanan ini.');
+            }
+        } else {
+            // Guest wajib memiliki session verifikasi token detail yang cocok
+            if (session('verified_detail_token') !== $token) {
+                AuditLogService::logUnauthorizedAccess($request->url(), auth()->id());
+                AuditLogService::logIdorAttempt($token, auth()->id());
+                if ($request->expectsJson()) {
+                    return response()->json(['error' => 'Akses ditolak.'], 403);
+                }
+                return redirect()->route('cancellation')
+                    ->with('error', 'Silakan verifikasi identitas Anda terlebih dahulu.');
+            }
+        }
+
         // Check if this booking is a reschedule
         $isReschedule = false;
         $detail = $booking->bookingDetails->first();
@@ -1124,6 +1149,44 @@ class BookingController extends Controller
         }
 
         $newStatus = $request->input('status');
+
+        // 2. Verifikasi Alur Status 'berhasil' (Anti-Bypass Pembayaran)
+        if ($newStatus === 'berhasil') {
+            $isAllowedReschedule = false;
+            
+            if ($detail && $detail->note) {
+                $note = json_decode($detail->note, true);
+                $ri = $note['reschedule_info'] ?? null;
+                
+                // Hanya boleh diset 'berhasil' via public route jika merupakan reschedule 
+                // dengan status 'no_payment_required' atau 'refund_due' yang terverifikasi di DB
+                if ($ri && !empty($ri['is_reschedule'])) {
+                    if (in_array($ri['payment_status'] ?? '', ['no_payment_required', 'refund_due'])) {
+                        $isAllowedReschedule = true;
+                    }
+                }
+            }
+
+            // Jika bukan reschedule gratis, blokir akses! (Booking biasa wajib via Webhook Midtrans)
+            if (!$isAllowedReschedule) {
+                AuditLogService::log(
+                    'unauthorized_status_bypass',
+                    "Percobaan ilegal mengubah status booking {$token} menjadi 'berhasil' secara langsung dari IP: {$request->ip()}",
+                    $booking->user_id,
+                    'CRITICAL'
+                );
+                
+                Log::warning('Security: Blokir percobaan ubah status ke berhasil secara manual', [
+                    'booking_token' => $token,
+                    'ip' => $request->ip()
+                ]);
+
+                if ($request->expectsJson()) {
+                    return response()->json(['error' => 'Transaksi tidak sah.'], 403);
+                }
+                return back()->with('error', 'Transaksi tidak sah.');
+            }
+        }
 
         $validTransitions = [
             'proses' => ['pembayaran', 'berhasil', 'dibatalkan'], // 'berhasil' allowed for reschedule with no extra payment
