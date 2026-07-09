@@ -468,5 +468,42 @@ class MidtransWebhookTest extends TestCase
         // Status booking harus berhasil berubah menjadi berhasil
         $this->assertEquals('berhasil', $booking->fresh()->status->value);
     }
+
+    /**
+     * RT-11: Menguji pembatalan booking (status dibatalkan)
+     */
+    public function test_booking_cancellation(): void
+    {
+        $this->seed();
+        $unit = \App\Models\AreaUnit::first();
+
+        $booking = Booking::create([
+            'booking_type' => 'glamping',
+            'booking_date' => now()->toDateString(),
+            'token_code' => 'TESTCANCEL123',
+            'status' => 'proses',
+            'guest_name' => 'John Doe',
+            'guest_phone' => '08123456789',
+            'guest_email' => 'john@example.com'
+        ]);
+
+        \App\Models\BookingDetail::create([
+            'booking_id' => $booking->id,
+            'unit_id' => $unit->id,
+            'check_in' => now()->addDays(5)->toDateString(),
+            'check_out' => now()->addDays(6)->toDateString(),
+            'number_of_people' => 2,
+            'total_price' => 1500000.00
+        ]);
+
+        $response = $this->withSession(['verified_detail_token' => $booking->token_code])
+            ->post("/reservasi/detail-pesanan/{$booking->token_code}/update-status", [
+                'status' => 'dibatalkan'
+            ]);
+
+        $response->assertStatus(302); // should redirect
+        $this->assertEquals('dibatalkan', $booking->fresh()->status->value);
+        $this->assertDatabaseHas('cancellations', ['booking_id' => $booking->id]);
+    }
 }
 
