@@ -20,6 +20,7 @@ export default defineConfig({
                 'resources/js/pages/morikafe.js',
                 'resources/js/pages/reschedule.js',
                 'resources/js/pages/cancellation.js',
+                'resources/js/pages/cancellation-confirm.js',
                 'resources/js/pages/barang-tambahan.js',
                 'resources/js/pages/area.js',
                 'resources/js/pages/detail-pesanan.js',
