@@ -1,0 +1,95 @@
+name: DevSecOps Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ============ STAGE 1: STATIC CODE ANALYSIS (SAST) ============
+  sast:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      - name: Install dependencies
+        run: composer install --no-dev --optimize-autoloader
+
+      - name: Run PHPStan (Static Analysis)
+        run: |
+          composer require --dev phpstan/phpstan
+          vendor/bin/phpstan analyse app --level=5
+
+      - name: Run PHP_CodeSniffer (Code Standards)
+        run: |
+          composer require --dev squizlabs/php_codesniffer
+          vendor/bin/phpcs --standard=PSR12 app/
+
+  # ============ STAGE 2: DEPENDENCY SCANNING (SCA) ============
+  dependency-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PHP Security Checker (Composer)
+        uses: symfonycorp/security-checker-action@v5
+
+      - name: NPM Audit
+        run: |
+          npm install
+          npm audit --audit-level=high
+
+  # ============ STAGE 3: SECRET SCANNING ============
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Gitleaks Secret Scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ============ STAGE 4: UNIT & FEATURE TESTS ============
+  test:
+    runs-on: ubuntu-latest
+    needs: [sast, dependency-scan]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      - name: Install dependencies
+        run: composer install
+
+      - name: Run PHPUnit tests
+        run: php artisan test
+
+  # ============ STAGE 5: CONTAINER IMAGE SCANNING ============
+  container-scan:
+    runs-on: ubuntu-latest
+    needs: [test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t pineustilu-app:${{ github.sha }} .
+
+      - name: Trivy Container Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'pineustilu-app:${{ github.sha }}'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
