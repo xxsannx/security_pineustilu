@@ -107,6 +107,13 @@ class TwoFactor extends Component
 
         $confirmTwoFactorAuthentication(auth()->user(), $this->code);
 
+        \App\Services\AuditLogService::log(
+            '2fa_enabled',
+            "User berhasil mengaktifkan Two-Factor Authentication (2FA)",
+            auth()->id(),
+            'WARNING'
+        );
+
         $this->closeModal();
 
         $this->twoFactorEnabled = true;
@@ -128,6 +135,13 @@ class TwoFactor extends Component
     public function disable(DisableTwoFactorAuthentication $disableTwoFactorAuthentication): void
     {
         $disableTwoFactorAuthentication(auth()->user());
+
+        \App\Services\AuditLogService::log(
+            '2fa_disabled',
+            "User menonaktifkan Two-Factor Authentication (2FA)",
+            auth()->id(),
+            'CRITICAL'
+        );
 
         $this->twoFactorEnabled = false;
     }

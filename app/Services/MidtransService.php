@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Booking;
 use App\Models\Payment;
+use App\Services\AuditLogService;
 use Exception;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -65,6 +66,14 @@ class MidtransService
                     'body'   => $response->body(),
                     'booking_id' => $booking->id,
                 ]);
+
+                AuditLogService::log(
+                    'midtrans_api_failed',
+                    "Gagal membuat Snap Token untuk booking ID {$booking->id}. HTTP Status: " . $response->status(),
+                    $booking->user_id,
+                    'WARNING'
+                );
+
                 return null;
             }
 
@@ -101,6 +110,14 @@ class MidtransService
                 'booking_id' => $booking->id,
                 'exception'  => $e,
             ]);
+
+            AuditLogService::log(
+                'midtrans_api_failed',
+                "Gagal membuat Snap Token untuk booking ID {$booking->id}. Exception: " . $e->getMessage(),
+                $booking->user_id,
+                'WARNING'
+            );
+
             return null;
         }
     }
@@ -399,6 +416,14 @@ class MidtransService
                     'order_id' => $orderId,
                     'status' => $response->status(),
                 ]);
+
+                AuditLogService::log(
+                    'midtrans_api_failed',
+                    "Gagal mengambil status pembayaran order {$orderId} dari Midtrans. HTTP Status: " . $response->status(),
+                    null,
+                    'WARNING'
+                );
+
                 return null;
             }
 
@@ -409,6 +434,14 @@ class MidtransService
                 'order_id' => $orderId,
                 'exception' => $e,
             ]);
+
+            AuditLogService::log(
+                'midtrans_api_failed',
+                "Gagal mengambil status pembayaran order {$orderId} dari Midtrans. Exception: " . $e->getMessage(),
+                null,
+                'WARNING'
+            );
+
             return null;
         }
     }

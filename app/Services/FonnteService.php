@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Services\AuditLogService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -43,6 +44,14 @@ class FonnteService
                     Log::warning("Fonnte API responded with non-true status for {$phone}.", [
                         'response' => $responseData
                     ]);
+                    
+                    AuditLogService::log(
+                        'whatsapp_otp_failed',
+                        "WhatsApp OTP gagal terkirim ke {$phone}. Response: " . json_encode($responseData),
+                        null,
+                        'WARNING'
+                    );
+                    
                     return false;
                 }
             }
@@ -51,10 +60,25 @@ class FonnteService
                 'status' => $response->status(),
                 'response' => $response->json()
             ]);
+
+            AuditLogService::log(
+                'whatsapp_otp_failed',
+                "WhatsApp OTP gagal terkirim ke {$phone}. HTTP Status: " . $response->status(),
+                null,
+                'WARNING'
+            );
             
             return false;
         } catch (\Exception $e) {
             Log::error("Fonnte API Exception for {$phone}: " . $e->getMessage());
+
+            AuditLogService::log(
+                'whatsapp_otp_failed',
+                "WhatsApp OTP gagal terkirim ke {$phone}. Exception: " . $e->getMessage(),
+                null,
+                'WARNING'
+            );
+
             return false;
         }
     }

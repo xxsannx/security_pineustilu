@@ -33,6 +33,19 @@ class LogTwoFactorFailedListener
                     "Verifikasi 2FA gagal untuk user: {$email}",
                     $user?->id
                 );
+            } else {
+                // Catat kegagalan login biasa
+                $email = $event->credentials['email'] ?? 'unknown';
+                AuditLogService::log(
+                    'login_failed',
+                    "Percobaan login gagal untuk email: {$email}",
+                    null,
+                    'WARNING'
+                );
+
+                // Cek brute force
+                $ip = request()?->ip() ?? '0.0.0.0';
+                AuditLogService::checkBruteForce($ip);
             }
         } catch (\Throwable $e) {
             // Jangan crash jika listener gagal

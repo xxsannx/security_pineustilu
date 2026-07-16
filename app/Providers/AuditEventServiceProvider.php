@@ -3,8 +3,12 @@
 namespace App\Providers;
 
 use App\Listeners\LogTwoFactorFailedListener;
+use App\Services\AuditLogService;
 use Illuminate\Auth\Events\Failed;
+use Illuminate\Auth\Events\Registered;
+use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
+use Illuminate\Support\Facades\Event;
 
 /**
  * Service Provider khusus untuk mendaftarkan listener event audit logging.
@@ -30,5 +34,25 @@ class AuditEventServiceProvider extends ServiceProvider
     public function boot(): void
     {
         parent::boot();
+
+        // Log User Registration
+        Event::listen(Registered::class, function (Registered $event) {
+            AuditLogService::log(
+                'user_registered',
+                "Akun baru terdaftar dengan email: {$event->user->email}",
+                $event->user->id,
+                'INFO'
+            );
+        });
+
+        // Log Password Reset
+        Event::listen(PasswordReset::class, function (PasswordReset $event) {
+            AuditLogService::log(
+                'password_reset',
+                "Password berhasil diubah/direset untuk user: {$event->user->email}",
+                $event->user->id,
+                'WARNING'
+            );
+        });
     }
 }

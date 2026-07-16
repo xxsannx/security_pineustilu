@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Closure;
+use App\Services\AuditLogService;
 use Filament\Facades\Filament;
 use Filament\Models\Contracts\FilamentUser;
 use Illuminate\Auth\Middleware\Authenticate as Middleware;
@@ -28,7 +29,8 @@ class FilamentAdminAuthenticate extends Middleware
 
         // Check if user can access the Filament panel
         if ($user instanceof FilamentUser) {
-            if (! $user->canAccessPanel(Filament::getCurrentPanel())) {
+            if (!$user->canAccessPanel(Filament::getCurrentPanel())) {
+                AuditLogService::logUnauthorizedAccess($request->url(), $user->id);
                 abort(403, 'You do not have access to the admin panel.');
             }
         }
