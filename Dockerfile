@@ -13,7 +13,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
-# vendor diperlukan agar Tailwind bisa resolve flux.css dari livewire/flux
+# vendor diperlukan karena app.css mengimport file dari vendor/livewire/flux
 COPY --from=composer_builder /app/vendor ./vendor
 RUN npm run build
 
