@@ -13,6 +13,8 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
+# vendor diperlukan agar Tailwind bisa resolve flux.css dari livewire/flux
+COPY --from=composer_builder /app/vendor ./vendor
 RUN npm run build
 
 # Stage 3: Final PHP application image
