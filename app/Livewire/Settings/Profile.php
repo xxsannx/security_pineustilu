@@ -43,13 +43,30 @@ class Profile extends Component
             ],
         ]);
 
+        $oldEmail = $user->getOriginal('email');
+        $oldName = $user->getOriginal('name');
+
         $user->fill($validated);
 
+        $changes = [];
         if ($user->isDirty('email')) {
             $user->email_verified_at = null;
+            $changes[] = "email dari '{$oldEmail}' menjadi '{$user->email}'";
+        }
+        if ($user->isDirty('name')) {
+            $changes[] = "nama dari '{$oldName}' menjadi '{$user->name}'";
         }
 
         $user->save();
+
+        if (!empty($changes)) {
+            \App\Services\AuditLogService::log(
+                'profile_updated',
+                "User memperbarui profil: " . implode(', ', $changes),
+                $user->id,
+                'WARNING'
+            );
+        }
 
         $this->dispatch('profile-updated', name: $user->name);
     }

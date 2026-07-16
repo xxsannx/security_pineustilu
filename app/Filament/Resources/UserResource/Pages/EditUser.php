@@ -38,7 +38,20 @@ class EditUser extends EditRecord
 
     protected function afterSave(): void
     {
+        $oldRoles = $this->record->getRoleNames()->toArray();
         $role = $this->data['role'] ?? 'user';
+        
         $this->record->syncRoles([$role]);
+        
+        $newRoles = $this->record->fresh()->getRoleNames()->toArray();
+        
+        if ($oldRoles !== $newRoles) {
+            \App\Services\AuditLogService::log(
+                'role_escalation',
+                "Admin mengubah role user {$this->record->email} dari [" . implode(', ', $oldRoles) . "] menjadi [" . implode(', ', $newRoles) . "]",
+                auth()->id(),
+                'CRITICAL'
+            );
+        }
     }
 }

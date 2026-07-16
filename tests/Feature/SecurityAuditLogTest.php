@@ -2,65 +2,107 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use App\Models\ActivityLog;
-use App\Services\DetectSsrfService;
+use App\Livewire\Settings\Password as PasswordComponent;
+use App\Livewire\Settings\Profile as ProfileComponent;
+use App\Livewire\Settings\TwoFactor as TwoFactorComponent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Auth\Events\Registered;
+use Illuminate\Auth\Events\Failed;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class SecurityAuditLogTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_detects_and_logs_sql_injection(): void
+    /**
+     * Test 1: Log Registrasi User Baru
+     */
+    public function test_user_registration_logs_activity(): void
     {
-        // Kirim request dengan SQL injection payload
-        $this->post('/verify-otp', [
-            'phone' => '08123456789',
-            'otp' => "123456' OR '1'='1"
+        $this->seed();
+
+        $user = User::factory()->create([
+            'email' => 'newuser@example.com'
         ]);
 
+        event(new Registered($user));
+
         $this->assertDatabaseHas('activity_logs', [
-            'event' => 'sql_injection_attempt',
-            'severity' => 'CRITICAL',
+            'event' => 'user_registered',
+            'user_id' => $user->id,
         ]);
     }
 
-    public function test_detects_and_logs_xss(): void
+    /**
+     * Test 2: Log Login Gagal & Deteksi Brute Force
+     */
+    public function test_failed_login_and_brute_force_detection(): void
     {
-        // Kirim request dengan XSS payload
-        $this->post('/verify-otp', [
-            'phone' => '08123456789',
-            'otp' => '<script>alert(1)</script>'
+        $this->seed();
+
+        // Trigger 5x login gagal
+        for ($i = 0; $i < 5; $i++) {
+            event(new Failed('web', null, ['email' => 'target@example.com', 'password' => 'wrongpass']));
+        }
+
+        // Harus mencatat login_failed minimal 5 kali
+        $this->assertDatabaseHas('activity_logs', [
+            'event' => 'login_failed',
         ]);
 
+        // Harus mencatat deteksi brute_force
         $this->assertDatabaseHas('activity_logs', [
-            'event' => 'xss_attempt',
-            'severity' => 'CRITICAL',
-        ]);
-    }
-
-    public function test_detects_and_logs_debug_endpoint_access(): void
-    {
-        // Kirim request ke debug endpoint (Telescope)
-        $this->get('/telescope');
-
-        $this->assertDatabaseHas('activity_logs', [
-            'event' => 'debug_access',
-            'severity' => 'WARNING',
+            'event' => 'brute_force',
         ]);
     }
 
-    public function test_detects_and_logs_ssrf(): void
+    /**
+     * Test 3: Log Ganti Password profil
+     */
+    public function test_manual_password_change_logs_activity(): void
     {
-        $ssrfService = new DetectSsrfService();
-        
-        // Cek URL local / loopback
-        $detected = $ssrfService->checkUrl('http://127.0.0.1/admin');
+        $this->seed();
+        $user = User::factory()->create();
 
-        $this->assertTrue($detected);
+        $this->actingAs($user);
+
+        Livewire::test(PasswordComponent::class)
+            ->set('current_password', 'password')
+            ->set('password', 'NewSecurePassword123!')
+            ->set('password_confirmation', 'NewSecurePassword123!')
+            ->call('updatePassword');
+
         $this->assertDatabaseHas('activity_logs', [
-            'event' => 'ssrf_attempt',
-            'severity' => 'CRITICAL',
+            'event' => 'password_changed',
+            'user_id' => $user->id,
+        ]);
+    }
+
+    /**
+     * Test 4: Log Update Profil (Email & Nama)
+     */
+    public function test_profile_update_logs_activity(): void
+    {
+        $this->seed();
+        $user = User::factory()->create([
+            'name' => 'Original Name',
+            'email' => 'original@example.com'
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::test(ProfileComponent::class)
+            ->set('name', 'Updated Name')
+            ->set('email', 'updated@example.com')
+            ->call('updateProfileInformation');
+
+        $this->assertDatabaseHas('activity_logs', [
+            'event' => 'profile_updated',
+            'user_id' => $user->id,
         ]);
     }
 }

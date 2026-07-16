@@ -35,6 +35,13 @@ class Password extends Component
             'password' => $validated['password'],
         ]);
 
+        \App\Services\AuditLogService::log(
+            'password_changed',
+            "User mengganti password mereka secara manual dari pengaturan profil",
+            Auth::id(),
+            'WARNING'
+        );
+
         $this->reset('current_password', 'password', 'password_confirmation');
 
         $this->dispatch('password-updated');
