@@ -14,6 +14,8 @@ COPY package*.json ./
 RUN npm install
 COPY . .
 COPY --from=composer_builder /app/vendor ./vendor
+RUN php artisan optimize:clear \
+    && php artisan config:cache
 RUN npm run build
 
 # Stage 3: Final PHP application image
