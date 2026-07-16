@@ -164,12 +164,12 @@ class OTPController extends Controller
         if ($method === 'email') {
             if ($user->email) {
                 try {
-                    Mail::to($user->email)->send(new OtpMail($otp));
-                    Log::info("Resend OTP via Email to {$user->email} successfully.");
+                    Mail::to($user->email)->queue(new OtpMail($otp));
+                    Log::info("Resend OTP queued via Email to {$user->email} successfully.");
                     AuditLogService::log('otp_sent', "OTP dikirim ulang via Email ke: {$user->email}", $user->id);
                     return response()->json(['success' => true, 'message' => 'OTP berhasil dikirim ulang ke Email.']);
                 } catch (\Exception $e) {
-                    Log::error("Resend OTP via Email failed: " . $e->getMessage());
+                    Log::error("Resend OTP via Email failed: " . $e->getMessage() . " | Class: " . get_class($e));
                     return response()->json([
                         'success' => false, 
                         'message' => 'Gagal mengirim OTP via Email. Sedang ada gangguan pada server.',

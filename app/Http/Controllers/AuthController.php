@@ -83,8 +83,8 @@ class AuthController extends Controller
 
         try {
             if ($otpMethod === 'email') {
-                Mail::to($user->email)->send(new OtpMail($otp));
-                Log::info("OTP sent via Email to: {$user->email}");
+                Mail::to($user->email)->queue(new OtpMail($otp));
+                Log::info("OTP queued via Email to: {$user->email}");
                 AuditLogService::log('otp_sent', "OTP registrasi dikirim via Email ke: {$user->email}", $user->id);
             } else {
                 // Send OTP via Fonnte
@@ -92,7 +92,7 @@ class AuthController extends Controller
                 AuditLogService::log('otp_sent', "OTP registrasi dikirim via WhatsApp ke: {$user->phone}", $user->id);
             }
         } catch (\Exception $e) {
-            Log::error("Failed to send OTP during registration: " . $e->getMessage());
+            Log::error("Failed to send OTP during registration: " . $e->getMessage() . " | Class: " . get_class($e));
             session()->flash('warning', 'Terdapat kendala saat mengirim OTP. Silakan gunakan tombol Kirim Ulang Kode di bawah atau ganti metode OTP.');
         }
 
@@ -156,8 +156,8 @@ class AuthController extends Controller
 
         try {
             if ($request->otp_method === 'email') {
-                Mail::to($user->email)->send(new OtpMail($otp));
-                Log::info("OTP sent via Email to: {$user->email}");
+                Mail::to($user->email)->queue(new OtpMail($otp));
+                Log::info("OTP queued via Email to: {$user->email}");
                 AuditLogService::log('otp_sent', "OTP login dikirim via Email ke: {$user->email}", $user->id);
             } else {
                 // Send OTP via Fonnte
@@ -165,7 +165,7 @@ class AuthController extends Controller
                 AuditLogService::log('otp_sent', "OTP login dikirim via WhatsApp ke: {$user->phone}", $user->id);
             }
         } catch (\Exception $e) {
-            Log::error("Failed to send OTP during login: " . $e->getMessage());
+            Log::error("Failed to send OTP during login: " . $e->getMessage() . " | Class: " . get_class($e));
             session()->flash('warning', 'Terdapat kendala saat mengirim OTP. Silakan gunakan tombol Kirim Ulang Kode di bawah atau ganti metode OTP.');
         }
 
