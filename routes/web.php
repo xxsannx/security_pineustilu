@@ -24,6 +24,17 @@ Route::view('/', 'dashboard')->name('home');
 
 Route::view('dashboard', 'dashboard')->name('dashboard');
 
+// Temporary route to inspect laravel.log on Render
+Route::get('/show-logs-xyz', function () {
+    $path = storage_path('logs/laravel.log');
+    if (!file_exists($path)) {
+        return response('No log file found.', 404);
+    }
+    $lines = file($path);
+    $lastLines = array_slice($lines, -150);
+    return response(implode("", $lastLines), 200, ['Content-Type' => 'text/plain']);
+});
+
 // Cabin VIP/VVIP routes
 Route::get('/cabin/vip', [AreaController::class, 'show'])->defaults('slug', 'pineus-tilu-cabin')->name('cabin.vip');
 Route::get('/cabin/vvip', [AreaController::class, 'show'])->defaults('slug', 'pineus-tilu-cabin-vvip')->name('cabin.vvip');
