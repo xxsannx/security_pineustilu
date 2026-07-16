@@ -23,10 +23,14 @@ FROM php:8.2-fpm-alpine AS base
 
 RUN apk add --no-cache \
     nginx supervisor gettext \
+    openssl \
+    ca-certificates \
     libpng-dev libjpeg-turbo-dev libwebp-dev freetype-dev \
     libzip-dev zip unzip git curl-dev \
     oniguruma-dev icu-dev libxml2-dev
 
+RUN update-ca-certificates
+    
 RUN docker-php-ext-configure gd --with-jpeg --with-webp --with-freetype \
     && docker-php-ext-install \
         pdo_mysql \
