@@ -146,3 +146,31 @@ Route::middleware(['auth'])->group(function () {
 // Google OAuth Routes
 Route::get('auth/google', [GoogleAuthController::class, 'redirectToGoogle'])->name('google.redirect');
 Route::get('auth/google/callback', [GoogleAuthController::class, 'handleGoogleCallback'])->name('google.callback');
+
+// Temporary Cloud Benchmark Route for Render.com (Safe isolated endpoint)
+Route::get('/dev/benchmark-otp', function (\Illuminate\Http\Request $request) {
+    if ($request->query('key') !== 'pineustilu2026') {
+        return response()->json(['error' => 'Unauthorized access. Secret key required.'], 403);
+    }
+
+    \Illuminate\Support\Facades\Artisan::call('benchmark:otp', [
+        '--iterations' => 50,
+        '--chart' => true,
+    ]);
+
+    if (\Illuminate\Support\Facades\Storage::exists('benchmark/statistics.json')) {
+        $stats = json_decode(\Illuminate\Support\Facades\Storage::get('benchmark/statistics.json'), true);
+        return response()->json([
+            'status' => 'success',
+            'environment_note' => 'Render Cloud Server Benchmark Output',
+            'executed_at' => now()->toIso8601String(),
+            'statistics' => $stats,
+        ], 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    }
+
+    return response()->json([
+        'status' => 'completed',
+        'cli_output' => \Illuminate\Support\Facades\Artisan::output(),
+    ]);
+});
+
