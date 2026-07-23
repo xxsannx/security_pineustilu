@@ -10,6 +10,9 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
+// Pembersihan otomatis record OTP yang expired (Garbage Collection)
+Schedule::command('model:prune')->daily();
+
 // Batalkan otomatis booking dengan status 'proses' atau 'pembayaran' yang sudah lewat 24 jam
 Schedule::call(function () {
     $expiredBookings = Booking::whereIn('status', ['proses', 'pembayaran'])
