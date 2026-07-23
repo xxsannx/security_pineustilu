@@ -22,8 +22,15 @@ class OTPController extends Controller
         $this->fonnteService = $fonnteService;
     }
 
+    private function cleanExpiredOtps(): void
+    {
+        OtpVerification::where('expired_at', '<', now())->delete();
+    }
+
     public function showVerifyForm()
     {
+        $this->cleanExpiredOtps();
+
         if (!session()->has('verify_phone')) {
             return redirect()->route('register')->withErrors(['phone' => 'Sesi verifikasi telah berakhir. Silakan login atau register ulang.']);
         }
@@ -44,6 +51,8 @@ class OTPController extends Controller
 
     public function verify(Request $request)
     {
+        $this->cleanExpiredOtps();
+
         $request->validate([
             'otp' => ['required', 'string', 'size:6'],
         ]);
@@ -123,6 +132,8 @@ class OTPController extends Controller
 
     public function resend(Request $request)
     {
+        $this->cleanExpiredOtps();
+
         $phone = $request->phone;
         $method = $request->input('method', 'whatsapp');
         
