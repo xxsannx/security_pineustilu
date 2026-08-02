@@ -12,7 +12,6 @@ on:
 
 permissions:
   contents: read
-  issues: write   # supaya action ZAP boleh bikin GitHub Issue dari temuan
 
 jobs:
   # =====================================================================
@@ -91,6 +90,9 @@ jobs:
           fail_action: false
           # false = workflow tidak gagal walau ZAP nemu warning,
           # ubah ke true kalau mau strict gating
+          allow_issue_writing: false
+          # false = tidak mencoba bikin GitHub Issue otomatis
+          # (fitur Issues di-disable di repo ini, jadi ini wajib false)
 
       - name: Upload ZAP Report
         uses: actions/upload-artifact@v4
