@@ -1,0 +1,83 @@
+name: Security Scan (SAST + DAST)
+
+# Jalan otomatis tiap ada push/PR ke main, dan bisa dijalankan manual juga
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: {}   # tombol "Run workflow" manual di tab Actions
+  schedule:
+    - cron: '0 2 * * 1'   # bonus: jalan otomatis tiap Senin jam 02:00 UTC
+
+jobs:
+  # =====================================================================
+  # JOB 1 — SAST & Dependency Scan (analisis kode & library, tanpa run app)
+  # =====================================================================
+  sast-scan:
+    name: SAST & Dependency Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Composer Audit (cek CVE di dependency PHP)
+        run: composer audit --format=table || true
+        # "|| true" supaya workflow tidak langsung gagal-stop;
+        # bisa dihapus kalau mau strict (fail build jika ada kerentanan)
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install npm dependencies
+        run: npm install
+
+      - name: npm audit (cek CVE di dependency JS)
+        run: npm audit --audit-level=high || true
+
+      - name: Snyk Setup
+        uses: snyk/actions/setup@master
+
+      - name: Snyk Test (dependency + code scan)
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          snyk test --all-projects --severity-threshold=high || true
+          snyk code test --severity-threshold=high || true
+
+  # =====================================================================
+  # JOB 2 — DAST Scan (OWASP ZAP Baseline, scan aplikasi yang live)
+  # =====================================================================
+  dast-scan:
+    name: DAST Scan (OWASP ZAP)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: 'https://riverside.pineustilu.id'
+          # Ganti dengan URL staging kalau tidak mau scan production langsung
+          cmd_options: '-a'
+          fail_action: false
+          # false = workflow tidak gagal walau ZAP nemu warning,
+          # ubah ke true kalau mau strict gating
+
+      - name: Upload ZAP Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-report
+          path: report_html.html
