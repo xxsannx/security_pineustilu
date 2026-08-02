@@ -10,6 +10,10 @@ on:
   schedule:
     - cron: '0 2 * * 1'   # bonus: jalan otomatis tiap Senin jam 02:00 UTC
 
+permissions:
+  contents: read
+  issues: write   # supaya action ZAP boleh bikin GitHub Issue dari temuan
+
 jobs:
   # =====================================================================
   # JOB 1 — SAST & Dependency Scan (analisis kode & library, tanpa run app)
