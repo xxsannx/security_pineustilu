@@ -65,12 +65,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Warm up target (bangunkan Render free-tier dari sleep)
+        run: |
+          echo "Membangunkan server, mencoba selama maksimal 3 menit..."
+          for i in $(seq 1 18); do
+            status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://sec-pineustilu-1.onrender.com || echo "000")
+            echo "Percobaan $i: HTTP status $status"
+            if [ "$status" != "000" ]; then
+              echo "Server sudah merespons."
+              break
+            fi
+            sleep 10
+          done
+
       - name: OWASP ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.14.0
         with:
           target: 'https://sec-pineustilu-1.onrender.com'
-          # Ganti dengan URL staging kalau tidak mau scan production langsung
-          cmd_options: '-a'
+          cmd_options: '-a -T 10'
+          # -T 10 = kasih waktu tambahan (menit) untuk spider, jaga-jaga kalau masih lambat
           fail_action: false
           # false = workflow tidak gagal walau ZAP nemu warning,
           # ubah ke true kalau mau strict gating
